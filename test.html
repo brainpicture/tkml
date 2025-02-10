@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>TKML Test</title>
+    <link rel="stylesheet" href="./styles.min.css">
+    <script src="./tkml.min.js"></script>
+</head>
+
+<body>
+    <div id="container"></div>
+
+    <script>
+        // Get container element
+        const container = document.getElementById('container');
+
+        // Initialize TKML with container
+        const tkml = new TKML(container, { dark: true });
+
+        // Parse TKML content
+        /*tkml.fromText(`
+            <title>Tonstakers</title>
+            <desc>
+                When you stake ton in Tonstakers pool, you receive a token called tsTON that represents you share ...
+            </desc>
+            <button>Next page</button>
+        `);*/
+        tkml.load("http://localhost:8084/index.tkml");
+    </script>
+</body>
+
+</html>
