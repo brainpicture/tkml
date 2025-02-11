@@ -1,6 +1,25 @@
-# TKML (Tonstake Markup Language)
+# TKML (Template Kit Markup Language)
 
-TKML is a lightweight markup language and rendering engine designed for building fast, mobile-friendly web applications with minimal configuration. It provides a set of pre-styled components that follow modern design principles.
+TKML isn't just a markup language; it's like your retro '90s game console for web apps! No need for CSS or JS—just plug in your components in XML format and play. We've sprinkled in some '90s vibes and a dash of HTTP/1.1 nostalgia to keep things fun and simple.
+
+TKML is designed for building fast, mobile-friendly web applications with minimal configuration. Think of it as your trusty sidekick, providing a set of pre-styled components that follow modern design principles, so you can focus on creating awesome content without sweating the small stuff.
+
+You can create the simplest TKML app by uploading an `index.tkml` page to your website. This page serves as the entry point for your application. Here's a basic example:
+
+1. **Create an `index.tkml` file**: This file will contain your TKML markup. For instance:
+
+   ```xml
+   <title>Hello</title>
+   <desc>
+       Hello world! This is a minimal TKML website.
+   </desc>
+   ```
+
+2. **Upload the file to your server**: Place the `index.tkml` file in the root directory of your website or any accessible path.
+
+3. **Access your TKML app**: Go to http://tkml.app, and type `example.com/index.tkml` in input field.
+
+This simple setup will render a page with a title and a description, demonstrating the basic structure of a TKML document.
 
 ## Features
 
