@@ -17,15 +17,15 @@
         // Initialize TKML with container
         const tkml = new TKML(container, { dark: true });
 
-        // Parse TKML content
-        /*tkml.fromText(`
-            <title>Tonstakers</title>
-            <desc>
-                When you stake ton in Tonstakers pool, you receive a token called tsTON that represents you share ...
-            </desc>
-            <button>Next page</button>
-        `);*/
-        tkml.load("http://localhost:8084/index.tkml");
+        // Check for 'l' parameter and load that URL if present
+        const params = new URLSearchParams(window.location.search);
+        const loadUrl = params.get('l');
+
+        if (loadUrl) { // load current page
+            tkml.load(decodeURIComponent(loadUrl));
+        } else {
+            tkml.load("http://localhost:8084/index.tkml");
+        }
     </script>
 </body>
 

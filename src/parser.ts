@@ -1,5 +1,6 @@
 import { SaxesParser } from 'saxes';
 import { ComponentFactory, Component, Text, Root } from './components';
+import { Runtime } from './runtime';
 
 export class Parser {
     body: string = ''
@@ -7,17 +8,17 @@ export class Parser {
     currentElement: HTMLElement | null = null
     root: HTMLElement
     rootComponent: Component
-    private runtimeId: number
+    private runtime: Runtime
 
-    constructor(container: HTMLElement, runtimeId: number) {
+    constructor(container: HTMLElement, runtime: Runtime) {
         this.root = container;
-        this.runtimeId = runtimeId;
+        this.rootComponent = new Root(runtime);
+        this.runtime = runtime;
         this.parser = new SaxesParser({
             xmlns: true,
             fragment: true
         });
 
-        this.rootComponent = new Root(this.runtimeId);
         let curComponent: Component | null = this.rootComponent
 
         this.parser.on('opentag', (node) => {
@@ -48,14 +49,18 @@ export class Parser {
 
         this.parser.on('text', (text) => {
             if (curComponent) {
-                let textComponent = new Text(text);
-                textComponent.parent = curComponent;
-                curComponent.addChild(textComponent);
+                text = text.trim();
+                if (text) {
+                    const textComponent = new Text(text);
+                    textComponent.parent = curComponent;
+                    curComponent.addChild(textComponent);
+                }
             }
         });
 
         this.parser.on('error', this.failed.bind(this));
     }
+
 
     // add more xml content to the body for a streaming parser
     add(text: string) {
