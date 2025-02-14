@@ -1,4 +1,4 @@
-# TKML (Template Kit Markup Language)
+# TKML (TonKeeper Markup Language)
 
 TKML isn't just a markup language; it's like your retro '90s game console for web apps! No need for CSS or JS—just plug in your components in XML format and play. We've sprinkled in some '90s vibes and a dash of HTTP/1.1 nostalgia to keep things fun and simple.
 

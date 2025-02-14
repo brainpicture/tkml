@@ -236,6 +236,9 @@ export class Button extends BaseComponent {
             const target = this.attributes['target'] ? `, '${this.attributes['target']}'` : '';
             attrs += ` onclick="tkmlr(${this.runtime?.getId()}).loader(this).go('${url}'${target})"`;
         }
+        if (this.attributes['preload'] === 'true') {
+            setTimeout(() => this.runtime?.preload(this.attributes['href']), 0);
+        }
         return `<button class="button"${attrs}>${this.renderText()}</button>`;
     }
 }
@@ -413,6 +416,9 @@ export class Checkbox extends BaseComponent {
             const url = encodeUrl(this.attributes['href']);
             const target = this.attributes['target'] ? `, '${this.attributes['target']}'` : '';
             attrs += ` onclick="this.classList.toggle('checked'); this.style.opacity='0.5'; tkmlr(${this.runtime?.getId()}).loader(this).go('${url}', true${target})"`;
+            if (this.attributes['preload'] === 'true') {
+                setTimeout(() => this.runtime?.preload(this.attributes['href']), 0);
+            }
         } else {
             attrs += ` onclick="this.classList.toggle('checked')"`;
         }
@@ -446,6 +452,9 @@ export class Section extends BaseComponent {
             const target = this.attributes['target'] ? `, '${this.attributes['target']}'` : '';
             attrs += ` onclick="tkmlr(${this.runtime?.getId()}).loader(this).go('${url}'${target})"`;
             clickableClass = ' clickable';
+            if (this.attributes['preload'] === 'true') {
+                setTimeout(() => this.runtime?.preload(this.attributes['href']), 0);
+            }
         }
 
         if (this.attributes['icon']) {
