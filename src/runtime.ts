@@ -11,6 +11,7 @@ export class Runtime {
     private initialUrl: string | null = null;
     private static highlightJsLoaded = false;
     private static loadingPromise: Promise<void> | null = null;
+    private observers: Map<string, IntersectionObserver> = new Map();
 
     constructor(tkmlInstance: TKML) {
         this.instanceId = ++Runtime.counter;
@@ -42,9 +43,13 @@ export class Runtime {
         this.cache.set(url, content);
     }
 
-    public go(url: string) {
+    public go(url: string, noCache: boolean = false, target?: string) {
         url = decodeURIComponent(url);
-        this.load(url, true);
+        if (target) {
+            noCache = true;
+            console.log('target NO CACHE', target);
+        }
+        this.load(url, true, undefined, noCache, target);
     }
 
     public post(url: string, params: Record<string, string>) {
@@ -52,7 +57,7 @@ export class Runtime {
         this.load(url, true, params);
     }
 
-    public load(url: string, updateHistory: boolean = false, postData?: Record<string, string>) {
+    public load(url: string, updateHistory: boolean = false, postData?: Record<string, string>, noCache?: boolean, target?: string) {
         // Store initial URL on first load
         if (!this.initialUrl) {
             this.initialUrl = url;
@@ -67,16 +72,7 @@ export class Runtime {
             this.currentHost = new URL(fullUrl).origin;
         }
 
-        // Check cache first
-        if (this.hasCache(fullUrl) && !postData) {
-            const content = this.getCache(fullUrl)!;
-            const parser = new Parser(this.tkmlInstance.root, this);
-            parser.add(content);
-            parser.finish();
-            return;
-        }
-
-        if (updateHistory) {
+        if (updateHistory && !target) {
             // Update browser history with encoded URL as parameter
             const currentUrl = new URL(window.location.href);
             const historyUrl = new URL(window.location.origin + window.location.pathname);
@@ -87,6 +83,16 @@ export class Runtime {
             }
         }
 
+        // Check cache first
+        if (!postData && !noCache && this.hasCache(fullUrl)) {
+            console.log('cache', fullUrl);
+            const content = this.getCache(fullUrl)!;
+            const parser = new Parser(target ? document.getElementById(target)! : this.tkmlInstance.root, this, target);
+            parser.add(content);
+            parser.finish();
+            return;
+        }
+
         const xhr = new XMLHttpRequest();
         xhr.open(postData ? 'POST' : 'GET', fullUrl, true);
         xhr.setRequestHeader('Accept', 'application/tkml');
@@ -95,7 +101,7 @@ export class Runtime {
             xhr.setRequestHeader('Content-Type', 'application/json');
         }
 
-        const parser = new Parser(this.tkmlInstance.root, this);
+        const parser = new Parser(this.tkmlInstance.root, this, target);
 
         xhr.onprogress = () => {
             parser.add(xhr.responseText);
@@ -185,6 +191,33 @@ export class Runtime {
         });
 
         return Runtime.loadingPromise;
+    }
+
+    public observeLoader(element: HTMLElement, url: string) {
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    // Отключаем observer после первого срабатывания
+                    observer.disconnect();
+                    this.observers.delete(element.id);
+
+                    // Загружаем контент
+                    element.classList.add('loading');
+                    //this.load(url, false, undefined, true, element.id);
+                }
+            });
+        }, {
+            rootMargin: '100px'
+        });
+
+        this.observers.set(element.id, observer);
+        observer.observe(element);
+    }
+
+    // Очистка observers при необходимости
+    public cleanup() {
+        this.observers.forEach(observer => observer.disconnect());
+        this.observers.clear();
     }
 }
 

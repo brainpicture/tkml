@@ -1,78 +1,99 @@
-import { SaxesParser } from 'saxes';
+import { SAXParser, Tag } from 'sax';
 import { ComponentFactory, Component, Text, Root } from './components';
 import { Runtime } from './runtime';
 
 export class Parser {
     body: string = ''
-    parser: SaxesParser
+    parser: SAXParser
     currentElement: HTMLElement | null = null
     root: HTMLElement
-    rootComponent: Component
+    isFirstChunk: boolean = true
+    addClosingRoot: boolean = false
+    rootComponent: Component | null = null
     private runtime: Runtime
-
-    constructor(container: HTMLElement, runtime: Runtime) {
+    private targets?: string[]
+    constructor(container: HTMLElement, runtime: Runtime, target?: string) {
         this.root = container;
-        this.rootComponent = new Root(runtime);
         this.runtime = runtime;
-        this.parser = new SaxesParser({
-            xmlns: true,
-            fragment: true
+        this.targets = target?.split(',').map(t => t.trim());
+
+        // Создаем SAX парсер в нестрогом режиме (false)
+        this.parser = new SAXParser(false, {
+            lowercase: true,
+            trim: false,
         });
 
-        let curComponent: Component | null = this.rootComponent
+        let curComponent: Component | null = null;
 
-        this.parser.on('opentag', (node) => {
-            // Create component if available
+        this.parser.onopentag = (node: Tag) => {
             const attributes: Record<string, string> = {};
-            for (const k in node.attributes) {
-                const attr = node.attributes[k];
-                if (typeof attr === 'object' && 'value' in attr) {
-                    attributes[k] = (attr as any).value;
+            for (const [key, value] of Object.entries(node.attributes)) {
+                // Декодируем URL в src атрибутах
+                if (key === 'src') {
+                    attributes[key] = decodeURIComponent(String(value));
                 } else {
-                    attributes[k] = String(attr);
+                    attributes[key] = String(value);
                 }
             }
 
-            const component = ComponentFactory.create(node.name, attributes);
+            const component = ComponentFactory.create(node.name, attributes, runtime);
             if (curComponent) {
                 component.parent = curComponent;
                 curComponent.addChild(component);
+            } else {
+                this.rootComponent = component;
             }
             curComponent = component;
-        });
+        };
 
-        this.parser.on('closetag', () => {
+        this.parser.onclosetag = () => {
             if (curComponent) {
-                curComponent = curComponent.parent
-            }
-        });
-
-        this.parser.on('text', (text) => {
-            if (curComponent) {
-                text = text.trim();
-                if (text) {
-                    const textComponent = new Text(text);
-                    textComponent.parent = curComponent;
-                    curComponent.addChild(textComponent);
+                if (this.targets && curComponent.id && this.targets.includes(curComponent.id)) {
+                    let targetEl = document.getElementById(curComponent.id);
+                    if (targetEl) {
+                        targetEl.outerHTML = curComponent.render();
+                    }
                 }
+                curComponent = curComponent.parent;
             }
-        });
+        };
 
-        this.parser.on('error', this.failed.bind(this));
+        this.parser.ontext = (text: string) => {
+            if (curComponent) {
+                const textComponent = new Text(text);
+                textComponent.parent = curComponent;
+                curComponent.addChild(textComponent);
+            }
+        };
+
+        this.parser.onerror = (err: any) => {
+            console.error("Parsing error:", err);
+            this.failed(err);
+        };
     }
 
-
-    // add more xml content to the body for a streaming parser
     add(text: string) {
+        if (this.isFirstChunk) {
+            this.isFirstChunk = false;
+            if (!text.match(/^\s*(<!--[\s\S]*?-->\s*)*<tkml/)) {
+                text = '<tkml>' + text;
+                this.addClosingRoot = true;
+            }
+        }
+
         this.body += text;
         this.parser.write(text);
     }
 
     finish() {
-        // Final parsing if needed
+        if (this.addClosingRoot) {
+            this.add('</tkml>');
+        }
         this.parser.close();
-        let html = this.rootComponent.render();
-        this.root.innerHTML = html;
+        if (!this.targets && this.rootComponent) {
+            let html = this.rootComponent.render();
+            this.root.innerHTML = html;
+        }
     }
 
     failed(error: Error) {

@@ -27,6 +27,7 @@
         "webpack-dev-server": "^5.2.0"
     },
     "dependencies": {
+        "sax": "^1.4.1",
         "saxes": "^6.0.0"
     }
 }

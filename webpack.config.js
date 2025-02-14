@@ -3,6 +3,7 @@ const TerserPlugin = require('terser-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const CssMinimizerPlugin = require('css-minimizer-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const webpack = require('webpack');
 
 module.exports = {
     entry: {
@@ -36,7 +37,13 @@ module.exports = {
         ]
     },
     resolve: {
-        extensions: ['.tsx', '.ts', '.js', '.css']
+        extensions: ['.tsx', '.ts', '.js', '.css'],
+        fallback: {
+            "buffer": false,
+            "stream": false,
+            "string_decoder": false,
+            "process": false
+        }
     },
     optimization: {
         minimize: true,
@@ -58,6 +65,9 @@ module.exports = {
         new HtmlWebpackPlugin({
             template: './test.html',
             inject: false
+        }),
+        new webpack.DefinePlugin({
+            'process.env.NODE_DEBUG': false
         })
     ],
     devServer: {

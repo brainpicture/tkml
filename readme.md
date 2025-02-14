@@ -31,7 +31,7 @@ This simple setup will render a page with a title and a description, demonstrati
 - 🔌 Extensible component system
 
 ## Quick Start
-
+This example demonstrates how to embed a TKML app within your own application
 ```html
 <!DOCTYPE html>
 <html>
