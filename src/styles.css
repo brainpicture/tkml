@@ -26,6 +26,10 @@ html {
     color: #333;
 }
 
+.title.center {
+    text-align: center;
+}
+
 .button {
     margin: 10px 0;
     background-color: #45aef5;
@@ -147,6 +151,14 @@ html.dark {
 .desc {
     color: #8994a3;
     font-size: 14px;
+}
+
+.desc.center {
+    text-align: center;
+}
+
+.desc a {
+    color: #8994a3
 }
 
 .dark .title {
@@ -366,6 +378,7 @@ html.dark {
     min-height: 52px;
     display: flex;
     align-items: center;
+    position: relative;
 }
 
 .list-item .section {
@@ -386,7 +399,7 @@ html.dark {
 
 .section.loading {
     pointer-events: none;
-    opacity: 0.5;
+    opacity: 1;
 }
 
 .section-content {
@@ -414,24 +427,6 @@ html.dark {
     transform: translateY(-50%) rotate(45deg);
     opacity: 1;
     transition: opacity 0.2s;
-}
-
-.section.loading .section-arrow:after {
-    opacity: 0;
-}
-
-.section.loading .section-arrow:before {
-    content: '';
-    position: absolute;
-    width: 16px;
-    height: 16px;
-    left: 50%;
-    top: 50%;
-    margin: -8px 0 0 -8px;
-    border-radius: 50%;
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    border-top-color: white;
-    animation: button-spinner 0.6s linear infinite;
 }
 
 .section.clickable:hover .section-arrow:after {
@@ -538,6 +533,10 @@ html.dark {
     display: none;
 }
 
+.section.loading .section-content {
+    opacity: 1;
+}
+
 .loader {
     display: flex;
     align-items: center;
@@ -557,5 +556,24 @@ html.dark {
     border-radius: 50%;
     border: 3px solid rgba(255, 255, 255, 0.1);
     border-top-color: #45aef5;
+    animation: button-spinner 0.6s linear infinite;
+}
+
+.section.loading .section-arrow:after,
+.section.loading .section-icon {
+    display: none;
+}
+
+.section.loading.clickable:before {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    right: 16px;
+    top: 50%;
+    margin: -10px 0 0 -10px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-top-color: white;
     animation: button-spinner 0.6s linear infinite;
 }

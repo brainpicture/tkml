@@ -1,3 +1,4 @@
+import { BaseComponent, Component } from "./components";
 import { TKML } from "./index";
 import { Parser } from "./parser";
 
@@ -43,13 +44,13 @@ export class Runtime {
         this.cache.set(url, content);
     }
 
-    public go(url: string, noCache: boolean = false, target?: string) {
+    public go(url: string, noCache: boolean = false, target?: string, rootElement?: Component) {
         url = decodeURIComponent(url);
         if (target) {
             noCache = true;
             console.log('target NO CACHE', target);
         }
-        this.load(url, true, undefined, noCache, target);
+        this.load(url, true, undefined, noCache, target, rootElement);
     }
 
     public post(url: string, params: Record<string, string>) {
@@ -57,7 +58,7 @@ export class Runtime {
         this.load(url, true, params);
     }
 
-    public load(url: string, updateHistory: boolean = false, postData?: Record<string, string>, noCache?: boolean, target?: string) {
+    public load(url: string, updateHistory: boolean = false, postData?: Record<string, string>, noCache?: boolean, target?: string, rootElement?: Component) {
         // Store initial URL on first load
         if (!this.initialUrl) {
             this.initialUrl = url;
@@ -72,7 +73,7 @@ export class Runtime {
             this.currentHost = new URL(fullUrl).origin;
         }
 
-        if (updateHistory && !target) {
+        if (updateHistory && !target && !rootElement) {
             // Update browser history with encoded URL as parameter
             const currentUrl = new URL(window.location.href);
             const historyUrl = new URL(window.location.origin + window.location.pathname);
@@ -101,7 +102,7 @@ export class Runtime {
             xhr.setRequestHeader('Content-Type', 'application/json');
         }
 
-        const parser = new Parser(this.tkmlInstance.root, this, target);
+        const parser = new Parser(this.tkmlInstance.root, this, target, rootElement);
 
         xhr.onprogress = () => {
             parser.add(xhr.responseText);
@@ -193,7 +194,10 @@ export class Runtime {
         return Runtime.loadingPromise;
     }
 
-    public observeLoader(element: HTMLElement, url: string) {
+    public observeLoader(component: Component, url: string) {
+        if (!component.id) return;
+        const element = document.getElementById(component.id);
+        if (!element) return;
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
@@ -203,7 +207,7 @@ export class Runtime {
 
                     // Загружаем контент
                     element.classList.add('loading');
-                    //this.load(url, false, undefined, true, element.id);
+                    this.go(url, true, undefined, component);
                 }
             });
         }, {

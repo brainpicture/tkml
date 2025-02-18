@@ -11,14 +11,18 @@ export interface Component {
     parent: Component | null;
     runtime?: Runtime;
     render(): string;
+    renderChildren(children: Component[]): string;
+    children: Component[];
     addChild(child: Component): void;
+    getId(): string;
+    getWrappingElement(element: HTMLElement): HTMLElement;
 }
 
 // Base class providing default implementation for addChild
 export abstract class BaseComponent implements Component {
     private static counter = 0;
     abstract tag: string;
-    protected children: Component[] = [];
+    public children: Component[] = [];
     public parent: Component | null = null;
     public runtime?: Runtime;
     protected attributes: Record<string, string>;
@@ -36,25 +40,37 @@ export abstract class BaseComponent implements Component {
         child.parent = this;
     }
 
-    renderChildren(): string {
-        return this.children.map((child) => {
+    renderChildren(children: Component[]): string {
+        return children.map((child) => {
             let str = child.render()
             return str;
         }).join('')
-
     }
+
+    getId(): string {
+        if (!this.id) {
+            this.id = `${this.tag}-${this.runtime?.getId()}-${++BaseComponent.counter}`;
+        }
+        return this.id;
+    }
+
     // Render only text from all children
-    renderText(): string {
-        return this.children
+    renderText(children: Component[]): string {
+        return children
             .map(child => {
                 if (child instanceof Text) {
                     return (child as Text).text;
                 } else if (child instanceof BaseComponent) {
-                    return (child as BaseComponent).renderText();
+                    return (child as BaseComponent).renderText(child.children);
                 }
                 return '';
             })
             .join('');
+    }
+
+    // if this element is wrapping childs this function should return the wrapping element
+    getWrappingElement(element: HTMLElement): HTMLElement {
+        return element;
     }
 
     abstract render(): string;
@@ -67,12 +83,12 @@ export abstract class BaseComponent implements Component {
         return attrs;
     }
 
-    protected getId(): string {
-        return this.id || `${this.tag}-${this.runtime?.getId()}-${++BaseComponent.counter}`;
+    protected childs(): string {
+        return this.renderChildren(this.children)
     }
 
-    protected wrapChildrenInDivs(className: string): string {
-        return this.children
+    protected wrapChildrenInDivs(children: Component[], className: string): string {
+        return children
             .map((child) => {
                 if (child instanceof Text) {
                     let text = child.render().trim()
@@ -131,7 +147,7 @@ export class Proxy extends BaseComponent {
 
 
     render(): string {
-        return `<${this.tag}>${this.renderChildren()}</${this.tag}>`;
+        return `<${this.tag}>${this.childs()}</${this.tag}>`;
     }
 }
 
@@ -159,7 +175,10 @@ export class Title extends BaseComponent {
     }
 
     render(): string {
-        return `<h1 class="title"${this.getAttributes()}>${this.renderChildren()}</h1>`;
+        let attrs = this.getAttributes();
+        let centerClass = this.attributes['center'] !== undefined ? ' center' : '';
+
+        return `<div class="title${centerClass}"${attrs}>${this.childs()}</div>`;
     }
 }
 ComponentFactory.register(Title);
@@ -171,12 +190,11 @@ export class Alert extends BaseComponent {
     constructor(attributes?: Record<string, string>) {
         super(attributes);
     }
+    renderChildren(children: Component[]): string {
+        return this.renderText(children);
+    }
     render(): string {
-        let text = this.renderText();
-        if (text) {
-            return `<div class="alert"${this.getAttributes()}>${text}</div>`;
-        }
-        return '';
+        return `<div class="alert"${this.getAttributes()}>${this.childs()}</div>`;
     }
 }
 ComponentFactory.register(Alert);
@@ -204,7 +222,10 @@ export class Desc extends BaseComponent {
     }
 
     render(): string {
-        return `<p class="desc"${this.getAttributes()}>${this.renderChildren()}</p>`;
+        let attrs = this.getAttributes();
+        let centerClass = this.attributes['center'] !== undefined ? ' center' : '';
+
+        return `<p class="desc${centerClass}"${attrs}>${this.childs()}</p>`;
     }
 }
 ComponentFactory.register(Desc);
@@ -229,6 +250,10 @@ export class Button extends BaseComponent {
         super(attributes);
     }
 
+    renderChildren(children: Component[]): string {
+        return this.renderText(children);
+    }
+
     render(): string {
         let attrs = this.getAttributes();
         if (this.attributes['href']) {
@@ -239,7 +264,7 @@ export class Button extends BaseComponent {
         if (this.attributes['preload'] === 'true') {
             setTimeout(() => this.runtime?.preload(this.attributes['href']), 0);
         }
-        return `<button class="button"${attrs}>${this.renderText()}</button>`;
+        return `<button class="button"${attrs}>${this.childs()}</button>`;
     }
 }
 ComponentFactory.register(Button);
@@ -249,6 +274,10 @@ export class A extends BaseComponent {
 
     constructor(attributes: Record<string, string>) {
         super(attributes);
+    }
+
+    renderChildren(children: Component[]): string {
+        return this.renderText(children);
     }
 
     render(): string {
@@ -262,7 +291,7 @@ export class A extends BaseComponent {
                 setTimeout(() => this.runtime?.preload(this.attributes['href']), 0);
             }
         }
-        return `<a class="a"${attrs}>${this.renderText()}</a>`;
+        return `<a class="a"${attrs}>${this.childs()}</a>`;
     }
 }
 ComponentFactory.register(A);
@@ -274,9 +303,16 @@ export class List extends BaseComponent {
         super(attributes);
     }
 
+    getWrappingElement(element: HTMLElement): HTMLElement {
+        return element.parentNode as HTMLElement;
+    }
+
+    renderChildren(children: Component[]): string {
+        return this.wrapChildrenInDivs(children, 'list-item')
+    }
+
     render(): string {
-        const childrenHtml = this.wrapChildrenInDivs('list-item');
-        return `<div class="list"${this.getAttributes()}>${childrenHtml}</div>`;
+        return `<div class="list"${this.getAttributes()}>${this.childs()}</div>`;
     }
 }
 
@@ -291,7 +327,7 @@ export class Root extends BaseComponent {
     }
 
     render(): string {
-        return `${this.renderChildren()}`;
+        return `${this.childs()}`;
     }
 }
 ComponentFactory.register(Root);
@@ -334,9 +370,13 @@ export class Code extends BaseComponent {
         super(attributes);
     }
 
+    renderChildren(children: Component[]): string {
+        return this.renderText(children);
+    }
+
     render(): string {
         const language = this.attributes['lang'];
-        const code = this.renderText().trim();
+        const code = this.childs().trim();
         const elementId = this.getId();
 
         // Start loading highlight.js if needed
@@ -363,9 +403,12 @@ ComponentFactory.register(Code);
 export class Info extends BaseComponent {
     tag = 'info';
 
+    renderChildren(children: Component[]): string {
+        return this.wrapChildrenInDivs(children, 'list-item')
+    }
+
     render(): string {
-        const childrenHtml = this.wrapChildrenInDivs('info-item');
-        return `<div class="info"${this.getAttributes()}>${childrenHtml}</div>`;
+        return `<div class="info"${this.getAttributes()}>${this.childs()}</div>`;
     }
 }
 
@@ -375,7 +418,6 @@ export class Img extends BaseComponent {
     tag = 'img';
 
     constructor(attributes: Record<string, string>) {
-        console.log("IMAGE RENDER", attributes);
         super(attributes);
     }
 
@@ -429,7 +471,7 @@ export class Checkbox extends BaseComponent {
 
         return `
             <div class="checkbox${checkedClass}"${checkedAttr}${attrs}>
-                <div class="checkbox-label">${this.renderChildren()}</div>
+                <div class="checkbox-label">${this.childs()}</div>
                 <div class="checkbox-toggle">
                     <div class="checkbox-slider"></div>
                 </div>
@@ -441,6 +483,10 @@ ComponentFactory.register(Checkbox);
 
 export class Section extends BaseComponent {
     tag = 'section';
+
+    getWrappingElement(element: HTMLElement): HTMLElement {
+        return element.parentNode as HTMLElement;
+    }
 
     render(): string {
         let attrs = this.getAttributes();
@@ -471,7 +517,7 @@ export class Section extends BaseComponent {
 
         return `
             <div class="section${clickableClass}"${attrs}>
-                <div class="section-content">${this.renderChildren()}</div>
+                <div class="section-content">${this.childs()}</div>
                 ${icon}
             </div>
         `;
@@ -508,7 +554,7 @@ export class Radio extends BaseComponent {
 
         return `
             <div class="radio${checkedClass}"${checkedAttr}${attrs} data-group="${group}">
-                <div class="radio-label">${this.renderChildren()}</div>
+                <div class="radio-label">${this.childs()}</div>
                 <div class="radio-toggle">
                     <div class="radio-dot"></div>
                 </div>
@@ -526,9 +572,9 @@ export class Loader extends BaseComponent {
 
         if (this.attributes['href']) {
             setTimeout(() => {
-                const element = document.getElementById(id);
-                if (element && this.runtime) {
-                    this.runtime.observeLoader(element, this.attributes['href']);
+
+                if (this.runtime) {
+                    this.runtime.observeLoader(this, this.attributes['href']);
                 }
             }, 0);
         }

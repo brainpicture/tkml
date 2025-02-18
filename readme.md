@@ -53,100 +53,176 @@ This example demonstrates how to embed a TKML app within your own application
 
 ## Components
 
-### `<title>`
-Renders a page title or section header.
+### Title
+Displays a heading.
 ```xml
-<title>Welcome to TKML</title>
-```
-
-### `<desc>`
-Renders descriptive text with muted styling.
-```xml
-<desc>This is a description text</desc>
-```
-
-### `<button>`
-Interactive button element with loading state.
-```xml
-<button href="/action">Click me</button>
+<title>Regular Title</title>
+<title center>Centered Title</title>
 ```
 Attributes:
-- `href`: URL to navigate to
-- `preload`: Set to "true" to preload the target page
+- `center` - Centers the title text
 
-### `<a>`
-Link element with loading animation.
+### Desc
+Displays descriptive text in a muted color.
 ```xml
-<a href="/page">Go to page</a>
+<desc>Description text</desc>
+<desc center>Centered description</desc>
 ```
 Attributes:
-- `href`: URL to navigate to
-- `preload`: Set to "true" to preload the target page
+- `center` - Centers the description text
 
-### `<input>`
-Input field with loading state. The `name` attribute specifies the parameter name for submission. When data is entered into this field and submitted, the user will be redirected to the URL specified in the `href` attribute, and the content entered will be sent as a parameter with the name specified in the `name` attribute. The text will be sent in a POST request as JSON.
-
+### Button
+Creates a clickable button.
 ```xml
-<input placeholder="Enter text" href="/submit" name="query"/>
+<button href="/action">Click Me</button>
 ```
 Attributes:
-- `placeholder`: Placeholder text
-- `value`: Initial value
-- `type`: Input type
-- `href`: URL to submit to
-- `name`: Parameter name for submission
+- `href` - URL to navigate to when clicked
+- `target` - Target window ('_blank' for new window)
+- `preload` - Set to "true" to preload the href URL
 
-### `<list>`
-Container for list items with dividers.
+### Input
+Creates a text input field.
+```xml
+<input placeholder="Enter text" href="/submit" name="query" />
+```
+Attributes:
+- `placeholder` - Placeholder text
+- `value` - Initial value
+- `type` - Input type (text, password, etc)
+- `href` - URL to submit to on Enter
+- `name` - Parameter name for the submitted value
+
+### Section
+Creates a clickable section with optional icon.
+```xml
+<section href="/details" icon="/icons/arrow.png">Section content</section>
+```
+Attributes:
+- `href` - URL to navigate to when clicked
+- `icon` - URL of the icon to display
+- `target` - Target window
+- `preload` - Set to "true" to preload the href URL
+
+### List
+Groups items in a list container.
 ```xml
 <list>
-    <desc>First item</desc>
-    <desc>Second item</desc>
+    <section>Item 1</section>
+    <section>Item 2</section>
 </list>
 ```
 
-### `<code>`
-Code block with syntax highlighting.
+### Info
+Creates an info block with title, description, image and button.
+```xml
+<info>
+    <img src="/image.jpg" height="200" />
+    <title>Title</title>
+    <desc>Description</desc>
+    <button href="/action">Action</button>
+</info>
+```
+
+### Checkbox
+Creates a toggle switch.
+```xml
+<checkbox href="/toggle" checked>Toggle me</checkbox>
+```
+Attributes:
+- `href` - URL to call when toggled
+- `checked` - Initial checked state
+- `target` - Target window
+- `preload` - Set to "true" to preload the href URL
+
+### Radio
+Creates a radio button in a group.
+```xml
+<radio group="options" href="/select" checked>Option 1</radio>
+<radio group="options" href="/select">Option 2</radio>
+```
+Attributes:
+- `group` - Group name for related radio buttons
+- `href` - URL to call when selected
+- `checked` - Initial checked state
+- `target` - Target window
+- `preload` - Set to "true" to preload the href URL
+
+### Code
+Displays syntax-highlighted code.
 ```xml
 <code lang="javascript">
-function hello() {
-    console.log("Hello world!");
-}
+const x = 42;
+console.log(x);
 </code>
 ```
 Attributes:
-- `lang`: Programming language for syntax highlighting
+- `lang` - Programming language for syntax highlighting
 
-### `<br>`
-Line break element.
+### Img
+Displays an image.
 ```xml
-Line 1<br/>Line 2
+<img src="/image.jpg" alt="Description" height="200" />
+```
+Attributes:
+- `src` - Image URL
+- `alt` - Alternative text
+- `height` - Fixed height in pixels
+
+### Loader
+Creates a loading indicator that loads content when visible.
+```xml
+<loader href="/content" />
+```
+Attributes:
+- `href` - URL of content to load when loader becomes visible
+
+### Links
+Creates a clickable link.
+```xml
+<a href="/page" preload="true">Click here</a>
+```
+Attributes:
+- `href` - URL to navigate to
+- `target` - Target window ('_blank' for new window)
+- `preload` - Set to "true" to preload the href URL
+
+### Text Formatting
+Basic text formatting tags:
+```xml
+<b>Bold text</b>
+<i>Italic text</i>
+<u>Underlined text</u>
+<s>Strikethrough text</s>
 ```
 
-## Example TKML Document
-
+### Line Break
+Adds vertical spacing:
 ```xml
-<title>Welcome to TKML</title>
-<desc>
-    Build beautiful mobile apps without worrying about CSS or JavaScript.
-</desc>
+<br/>
+```
 
+All components that support navigation (`button`, `section`, `a`, etc) have these common attributes:
+- `href` - URL to navigate to
+- `target` - Target window ('_blank' for new window)
+- `preload` - Set to "true" to preload the URL
+
+## Examples
+
+Complete page example:
+```xml
+<title center>Welcome</title>
+<desc center>Select an option below</desc>
 <list>
-    <title>Getting Started</title>
-    <desc>
-        TKML makes it easy to create mobile-friendly interfaces
-        with pre-styled components and automatic dark mode support.
-    </desc>
-    <button href="/start">Get Started</button>
+    <section href="/option1" icon="/icons/1.png">First Option</section>
+    <section href="/option2" icon="/icons/2.png">Second Option</section>
 </list>
-
-<list>
-    <title>Documentation</title>
-    <desc>Read our comprehensive guides and API documentation</desc>
-    <a href="/docs">Browse Documentation</a>
-</list>
-
-<alert>New features available!</alert>
+<info>
+    <img src="/banner.jpg" height="200" />
+    <title>Important Info</title>
+    <desc>Additional details here</desc>
+    <button href="/more">Learn More</button>
+</info>
 ```
 
 ### Automatic Dark Mode

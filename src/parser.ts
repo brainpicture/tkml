@@ -10,12 +10,16 @@ export class Parser {
     isFirstChunk: boolean = true
     addClosingRoot: boolean = false
     rootComponent: Component | null = null
+    renderElement: Component | null = null
     private runtime: Runtime
     private targets?: string[]
-    constructor(container: HTMLElement, runtime: Runtime, target?: string) {
+    constructor(container: HTMLElement, runtime: Runtime, target?: string, renderElement?: Component) {
         this.root = container;
         this.runtime = runtime;
         this.targets = target?.split(',').map(t => t.trim());
+        if (renderElement) {
+            this.renderElement = renderElement;
+        }
 
         // Создаем SAX парсер в нестрогом режиме (false)
         this.parser = new SAXParser(false, {
@@ -91,8 +95,28 @@ export class Parser {
         }
         this.parser.close();
         if (!this.targets && this.rootComponent) {
-            let html = this.rootComponent.render();
-            this.root.innerHTML = html;
+            if (this.renderElement) {
+                //this.rootComponent
+                let parent = this.renderElement.parent
+                let html;
+                let el = document.getElementById(this.renderElement.id!);
+                if (parent) {
+                    this.rootComponent.children.forEach(child => {
+                        child.parent = parent;
+                    })
+                    html = parent.renderChildren(this.rootComponent.children);
+                    el = el ? parent.getWrappingElement(el) : null;
+
+                } else {
+                    html = this.rootComponent.render();
+                }
+                if (el) {
+                    el.outerHTML = html;
+                }
+            } else {
+                let html = this.rootComponent.render();
+                this.root.innerHTML = html;
+            }
         }
     }
 
