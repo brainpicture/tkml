@@ -327,7 +327,7 @@ MIT
 
 ## Nginx Configuration
 
-To automatically wrap `.tkml` files in the HTML template when accessed directly (without proper headers), add this to your Nginx configuration:
+To automatically wrap `.tkml` files in the HTML template when accessed directly, add this to your Nginx configuration:
 
 ```nginx
 # Define variable to check if client accepts TKML
@@ -342,25 +342,24 @@ server {
     # Handle .tkml files
     location ~ \.tkml$ {
         if ($is_tkml = 0) {
-            # If not requesting TKML directly, wrap in HTML template
-            content_by_lua_block {
-                local file = io.open(ngx.var.request_filename, "r")
-                if file then
-                    local content = file:read("*all")
-                    file:close()
-                    
-                    local template = io.open(ngx.var.document_root .. "/wrap.html", "r")
-                    if template then
-                        local wrapper = template:read("*all")
-                        template:close()
-                        ngx.header.content_type = 'text/html'
-                        ngx.print(wrapper:gsub("{tkml_here}", content))
-                        return
-                    end
-                end
-                ngx.status = 404
-            }
-            break;
+            # If not requesting TKML directly, return wrapped content
+            add_header Content-Type text/html;
+            return 200 '<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="https://tkml.app/styles.min.css">
+    <script src="https://tkml.app/tkml.min.js"></script>
+</head>
+<body>
+    <div id="container">
+    <script>
+        const container = document.getElementById("container");
+        const tkml = new TKML(container, { dark: true });
+        tkml.fromText(`$request_uri`);
+    </script>
+    </div>
+</body>
+</html>';
         }
         
         # If requesting TKML directly, serve as is
@@ -370,19 +369,9 @@ server {
 ```
 
 This configuration:
-1. Creates a map to check if the client accepts TKML content
-2. For `.tkml` files:
-   - If accessed directly (without `Accept: application/tkml` header), wraps content in HTML template
-   - If requested with proper headers, serves raw TKML content
-3. Requires `lua-nginx-module` to be installed
+1. Uses a single Nginx config file without requiring additional template files
+2. Automatically wraps .tkml content when accessed directly in browser
+3. Serves raw TKML when requested with proper headers
+4. Requires no additional modules or files
 
-Make sure to place `wrap.html` in your web root directory or adjust the path in the configuration.
-
-Note: You'll need to have Lua support in your Nginx installation. If you don't have it, you can install it via:
-```bash
-# For Ubuntu/Debian
-apt-get install nginx-extras
-
-# For CentOS/RHEL
-yum install nginx-mod-http-lua
-```
+Note: This is the simplest possible setup, though it might need adjustments depending on your specific needs (like handling special characters in TKML content).
