@@ -13,6 +13,8 @@ push:
 	# Copy project files
 	ssh root@prod 'mkdir -p /var/www/tkml'
 	scp dist/index.html root@prod:/var/www/tkml/index.html
+	scp dist/tkml.min.js root@prod:/var/www/tkml/tkml.min.js
+	scp dist/styles.min.css root@prod:/var/www/tkml/styles.min.css
 
 push-all: push
 	# Copy nginx config directly to sites-enabled and reload nginx

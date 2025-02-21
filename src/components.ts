@@ -1,8 +1,5 @@
 import { Runtime } from './runtime';
-// Add at the top of the file
-function encodeUrl(url: string): string {
-    return encodeURIComponent(url).replace(/["']/g, match => match === '"' ? '&quot;' : '&#39;');
-}
+import { encodeUrl, safeIds, safeAttr, resolveUrl } from './util';
 
 // Base interface for all components
 export interface Component {
@@ -10,6 +7,7 @@ export interface Component {
     id?: string;
     parent: Component | null;
     runtime?: Runtime;
+    canParent?: string[] | null; // Список разрешенных родительских компонентов
     render(): string;
     renderChildren(children: Component[]): string;
     children: Component[];
@@ -27,10 +25,11 @@ export abstract class BaseComponent implements Component {
     public runtime?: Runtime;
     protected attributes: Record<string, string>;
     public id?: string;
+    canParent: string[] | null = null;
     constructor(attributes?: Record<string, string>) {
         this.attributes = attributes || {};
         if (this.attributes['id']) {
-            this.id = this.attributes['id'];
+            this.id = safeIds(this.attributes['id']);
         }
     }
 
@@ -87,18 +86,42 @@ export abstract class BaseComponent implements Component {
         return this.renderChildren(this.children)
     }
 
-    protected wrapChildrenInDivs(children: Component[], className: string): string {
-        return children
-            .map((child) => {
+    protected wrapChildrenInDivs(children: Component[], className: string, groupable?: boolean): string {
+        let result = [];
+        let currentGroup = [];
+
+        for (let i = 0; i < children.length; i++) {
+            const child = children[i];
+
+
+            if (groupable && child.tag === 'pill') {
+                console.log('Group PUSH', child.tag)
+                currentGroup.push(child.render());
+
+            } else {
+                // Для негруппируемых элементов рендерим как обычно
                 if (child instanceof Text) {
-                    let text = child.render().trim()
-                    if (text === '') {
-                        return ''
+                    console.log('text')
+                    let text = child.render();
+                    if (text === '' || text.replace(/[\s ]/g, '') === '') {
+                        continue;
                     }
                 }
-                return `<div class="${className} info-${child.tag}">${child.render()}</div>`
-            })
-            .join('');
+
+                if (currentGroup.length > 0) {
+                    result.push(`<div class="${className}-item ${className}-group">${currentGroup.join('')}</div>`);
+                    currentGroup = [];
+                }
+                console.log('text')
+                console.log('ELEM', child.tag)
+                result.push(`<div class="${className}-item ${className}-${child.tag}">${child.render()}</div>`);
+            }
+        }
+        if (currentGroup.length > 0) {
+            result.push(`<div class="${className}-item ${className}-group">${currentGroup.join('')}</div>`);
+        }
+
+        return result.join('');
     }
 }
 
@@ -113,17 +136,23 @@ export class ComponentFactory {
         this.components.set(instance.tag.toLowerCase(), componentClass);
     }
 
-    static create(tag: string, attributes: Record<string, string>, runtime: Runtime): Component {
+    static create(tag: string, attributes: Record<string, string>, runtime: Runtime, parent?: Component | null): Component {
         const ComponentClass = this.components.get(tag.toLowerCase());
         let component: Component;
+
         if (ComponentClass) {
             component = new ComponentClass(attributes);
             if (ComponentClass === Proxy) {
                 component.tag = tag; // set tag for proxy component
             }
+            // Проверяем ограничения родительского компонента
+            if (component.canParent && parent && !component.canParent.includes(parent.tag)) {
+                component = new Error(`Component <${tag}> cannot be a child of <${parent.tag}>`);
+            }
         } else {
             component = new Undefined(tag, attributes);
         }
+
         component.runtime = runtime;
         return component;
     }
@@ -158,11 +187,26 @@ export class Undefined extends BaseComponent {
 
     constructor(name: string, attributes?: Record<string, string>) {
         super(attributes);
-        this.name = name;
+        this.name = safeIds(name);
     }
 
     render(): string {
         return `<div class="undefined"><div class="error">Undefined component: ${this.name}</div></div>`;
+    }
+}
+
+// Undefined component is used once an undefined tag is encountered
+export class Error extends BaseComponent {
+    tag = 'error';
+    private error: string;
+
+    constructor(error: string, attributes?: Record<string, string>) {
+        super(attributes);
+        this.error = safeAttr(error);
+    }
+
+    render(): string {
+        return `<div class="panic"><div class="error">Error: ${this.error}</div></div>`;
     }
 }
 
@@ -256,15 +300,27 @@ export class Button extends BaseComponent {
 
     render(): string {
         let attrs = this.getAttributes();
+        let style = '';
+
+        // Обработка width
+        if (this.attributes['width']) {
+            const width = this.attributes['width'];
+            // Проверяем, содержит ли значение '%'
+            const isPercent = width.includes('%');
+            // Если это число без %, добавляем px
+            const value = isPercent ? width : `${parseInt(width)}px`;
+            style = ` style="width: ${value}"`;
+        }
+
         if (this.attributes['href']) {
             const url = encodeUrl(this.attributes['href']);
-            const target = this.attributes['target'] ? `, '${this.attributes['target']}'` : '';
+            const target = this.attributes['target'] ? `, '${safeIds(this.attributes['target'])}'` : '';
             attrs += ` onclick="tkmlr(${this.runtime?.getId()}).loader(this).go('${url}'${target})"`;
         }
         if (this.attributes['preload'] === 'true') {
             setTimeout(() => this.runtime?.preload(this.attributes['href']), 0);
         }
-        return `<button class="button"${attrs}>${this.childs()}</button>`;
+        return `<button class="button"${attrs}${style}>${this.childs()}</button>`;
     }
 }
 ComponentFactory.register(Button);
@@ -284,7 +340,7 @@ export class A extends BaseComponent {
         let attrs = this.getAttributes();
         if (this.attributes['href']) {
             const url = encodeUrl(this.attributes['href']);
-            const target = this.attributes['target'] ? `, '${this.attributes['target']}'` : '';
+            const target = this.attributes['target'] ? `, '${safeIds(this.attributes['target'])}'` : '';
             attrs += ` href="javascript:void(0)" onclick="tkmlr(${this.runtime?.getId()}).loader(this).go('${url}'${target})"`;
 
             if (this.attributes['preload'] === 'true') {
@@ -298,6 +354,7 @@ ComponentFactory.register(A);
 
 export class List extends BaseComponent {
     tag = 'list';
+    canParent = ['tkml'];
 
     constructor(attributes?: Record<string, string>) {
         super(attributes);
@@ -308,7 +365,7 @@ export class List extends BaseComponent {
     }
 
     renderChildren(children: Component[]): string {
-        return this.wrapChildrenInDivs(children, 'list-item')
+        return this.wrapChildrenInDivs(children, 'list')
     }
 
     render(): string {
@@ -345,16 +402,16 @@ export class Input extends BaseComponent {
             attrs += ` placeholder="${this.attributes['placeholder']}"`;
         }
         if (this.attributes['value']) {
-            attrs += ` value="${this.attributes['value']}"`;
+            attrs += ` value="${safeAttr(this.attributes['value'])}"`;
         }
         if (this.attributes['type']) {
-            attrs += ` type="${this.attributes['type']}"`;
+            attrs += ` type="${safeAttr(this.attributes['type'])}"`;
         }
 
         if (this.attributes['href']) {
             const url = encodeUrl(this.attributes['href']);
             const paramName = this.attributes['name'] || 'input';
-            attrs += ` onkeydown="if(event.key==='Enter'){tkmlr(${this.runtime?.getId()}).loader(this.parentElement).post('${url}', {${paramName}: this.value}, 'application/json')}"`;
+            attrs += ` onkeydown="if(event.key==='Enter'){tkmlr(${this.runtime?.getId()}).loader(this.parentElement).post('${url}', {${safeAttr(paramName)}: this.value}, 'application/json')}"`;
         }
 
         return `<div class="input-wrapper"><input class="input"${attrs}/><div class="input-spinner"></div></div>`;
@@ -393,8 +450,8 @@ export class Code extends BaseComponent {
         }
 
         // Return initial markup with plain code
-        const languageClass = language ? ` language-${language}` : '';
-        return `<pre class="code"><code class="${languageClass}" id="${elementId}">${code}</code></pre>`;
+        const languageClass = language ? ` language-${safeAttr(language)}` : '';
+        return `<pre class="code"><code class="${languageClass}" id="${elementId}">${safeAttr(code)}</code></pre>`;
     }
 }
 
@@ -402,9 +459,10 @@ ComponentFactory.register(Code);
 
 export class Info extends BaseComponent {
     tag = 'info';
+    canParent = ['tkml'];
 
     renderChildren(children: Component[]): string {
-        return this.wrapChildrenInDivs(children, 'list-item')
+        return this.wrapChildrenInDivs(children, this.tag, true);
     }
 
     render(): string {
@@ -426,10 +484,11 @@ export class Img extends BaseComponent {
         let style = '';
 
         if (this.attributes['src']) {
-            attrs += ` src="${this.attributes['src']}"`;
+            const imgUrl = resolveUrl(this.attributes['src'], this.runtime);
+            attrs += ` src="${safeAttr(imgUrl)}"`;
         }
         if (this.attributes['alt']) {
-            attrs += ` alt="${this.attributes['alt']}"`;
+            attrs += ` alt="${safeAttr(this.attributes['alt'])}"`;
         }
         if (this.attributes['height']) {
             style = ` style="--img-height: ${parseInt(this.attributes['height'])}px"`;
@@ -456,7 +515,7 @@ export class Checkbox extends BaseComponent {
 
         if (this.attributes['href']) {
             const url = encodeUrl(this.attributes['href']);
-            const target = this.attributes['target'] ? `, '${this.attributes['target']}'` : '';
+            const target = this.attributes['target'] ? `, '${safeIds(this.attributes['target'])}'` : '';
             attrs += ` onclick="this.classList.toggle('checked'); this.style.opacity='0.5'; tkmlr(${this.runtime?.getId()}).loader(this).go('${url}', true${target})"`;
             if (this.attributes['preload'] === 'true') {
                 setTimeout(() => this.runtime?.preload(this.attributes['href']), 0);
@@ -492,10 +551,11 @@ export class Section extends BaseComponent {
         let attrs = this.getAttributes();
         let clickableClass = '';
         let icon = '';
+        let deactivatedClass = this.attributes['deactivated'] !== undefined ? ' deactivated' : '';
 
         if (this.attributes['href']) {
             const url = encodeUrl(this.attributes['href']);
-            const target = this.attributes['target'] ? `, '${this.attributes['target']}'` : '';
+            const target = this.attributes['target'] ? `, '${safeIds(this.attributes['target'])}'` : '';
             attrs += ` onclick="tkmlr(${this.runtime?.getId()}).loader(this).go('${url}'${target})"`;
             clickableClass = ' clickable';
             if (this.attributes['preload'] === 'true') {
@@ -504,19 +564,14 @@ export class Section extends BaseComponent {
         }
 
         if (this.attributes['icon']) {
-            let iconUrl = this.attributes['icon'];
-            // Если URL относительный, добавляем текущий хост
-            if (!iconUrl.match(/^https?:\/\//)) {
-                const baseHost = this.runtime?.currentHost || window.location.origin;
-                iconUrl = baseHost + (iconUrl.startsWith('/') ? '' : '/') + iconUrl;
-            }
+            const iconUrl = resolveUrl(this.attributes['icon'], this.runtime);
             icon = `<img class="section-icon" src="${iconUrl}" alt="icon"/>`;
         } else if (this.attributes['href']) {
             icon = '<div class="section-arrow"></div>';
         }
 
         return `
-            <div class="section${clickableClass}"${attrs}>
+            <div class="section${clickableClass}${deactivatedClass}"${attrs}>
                 <div class="section-content">${this.childs()}</div>
                 ${icon}
             </div>
@@ -587,3 +642,107 @@ export class Loader extends BaseComponent {
     }
 }
 ComponentFactory.register(Loader);
+
+export class Header extends BaseComponent {
+    tag = 'header';
+
+    render(): string {
+        let attrs = this.getAttributes();
+        let centerClass = this.attributes['center'] !== undefined ? ' center' : '';
+        const id = this.getId();
+
+        // Регистрируем наблюдение за скроллом
+        setTimeout(() => {
+            if (this.runtime) {
+                this.runtime.observeHeader(id);
+            }
+        }, 0);
+
+        return `<div id="${id}" class="header${centerClass}"${attrs}>${this.childs()}</div>`;
+    }
+}
+ComponentFactory.register(Header);
+
+export class Back extends BaseComponent {
+    tag = 'back';
+    canParent = ['header']; // Back может быть только внутри header
+
+    render(): string {
+        let attrs = this.getAttributes();
+        const isInHeader = this.parent instanceof Header;
+        const id = this.getId();
+
+        // If href is not provided, check browser history
+        if (!this.attributes['href']) {
+            setTimeout(() => {
+                const element = document.getElementById(id);
+                if (element && !window.history.state && window.history.length <= 1) {
+                    element.style.display = 'none';
+                }
+            }, 0);
+        }
+
+        let onClick = '';
+        if (this.attributes['href']) {
+            const encodedUrl = encodeUrl(this.attributes['href']);
+            const target = this.attributes['target'] ? `, '${safeIds(this.attributes['target'])}'` : '';
+            onClick = `tkmlr(${this.runtime?.getId()}).loader(this).go('${encodedUrl}'${target})`
+        } else {
+            onClick = `tkmlr(${this.runtime?.getId()}).loader(this); history.back()`;
+        }
+
+        if (isInHeader) {
+            return `<div id="${id}" class="header-back" onclick="${onClick}"></div>`;
+        }
+
+        return `<button id="${id}" class="button back-button"${attrs} onclick="${onClick}">Back</button>`;
+    }
+}
+ComponentFactory.register(Back);
+
+export class Footer extends BaseComponent {
+    tag = 'footer';
+
+    render(): string {
+        let attrs = this.getAttributes();
+        const autoHideClass = this.attributes['autohide'] !== undefined ? ' autohide' : '';
+        const id = this.getId();
+
+        if (this.attributes['autohide'] !== undefined && this.runtime) {
+            setTimeout(() => {
+                this.runtime?.observeFooter(id);
+            }, 0);
+        }
+
+        return `<div id="${id}" class="footer${autoHideClass}"${attrs}>${this.childs()}</div>`;
+    }
+}
+ComponentFactory.register(Footer);
+
+export class Pill extends BaseComponent {
+    tag = 'pill';
+    canParent = ['info', 'tkml']; // Pill может быть только внутри info
+
+    render(): string {
+        const id = this.getId();
+        let icon = '';
+
+        if (this.attributes['icon']) {
+            const iconUrl = resolveUrl(this.attributes['icon'], this.runtime);
+            icon = `<img class="pill-icon" src="${iconUrl}" alt="icon"/>`;
+        }
+
+        return `<div id="${id}" class="pill">${this.childs()}${icon}</div>`;
+    }
+}
+ComponentFactory.register(Pill);
+
+export class W extends BaseComponent {
+    tag = 'w';
+    canParent = ['desc', 'title', 'section', 'tkml']; // W может быть только внутри текстовых компонентов
+
+    render(): string {
+        return `<span class="w">${this.childs()}</span>`;
+    }
+}
+ComponentFactory.register(W);

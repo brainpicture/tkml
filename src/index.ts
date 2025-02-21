@@ -3,6 +3,7 @@ import { Runtime } from './runtime';
 
 export class TKML {
     root: HTMLElement;
+    rootUrl: string = '';
     runtime: Runtime;
 
     constructor(container: HTMLElement, opts: { dark?: boolean } = {}) {

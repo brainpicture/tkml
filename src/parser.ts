@@ -40,7 +40,7 @@ export class Parser {
                 }
             }
 
-            const component = ComponentFactory.create(node.name, attributes, runtime);
+            const component = ComponentFactory.create(node.name, attributes, runtime, curComponent);
             if (curComponent) {
                 component.parent = curComponent;
                 curComponent.addChild(component);

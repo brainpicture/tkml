@@ -22,6 +22,7 @@
         const loadUrl = params.get('l');
 
         if (loadUrl) { // load current page
+            tkml.rootUrl = 'http://localhost:8084/index.tkml'
             tkml.load(decodeURIComponent(loadUrl));
         } else {
             tkml.load("http://localhost:8084/index.tkml");

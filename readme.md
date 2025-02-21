@@ -75,11 +75,14 @@ Attributes:
 Creates a clickable button.
 ```xml
 <button href="/action">Click Me</button>
+<button width="200">Fixed Width Button</button>
+<button width="100%">Full Width Button</button>
 ```
 Attributes:
 - `href` - URL to navigate to when clicked
 - `target` - Target window ('_blank' for new window)
 - `preload` - Set to "true" to preload the href URL
+- `width` - Button width in pixels or percentage (e.g. "200" or "100%")
 
 ### Input
 Creates a text input field.
@@ -114,7 +117,7 @@ Groups items in a list container.
 ```
 
 ### Info
-Creates an info block with title, description, image and button.
+Another type of list container without any separation between items. The info block always tries to layout elements inside to make them look good.
 ```xml
 <info>
     <img src="/image.jpg" height="200" />
@@ -207,6 +210,60 @@ All components that support navigation (`button`, `section`, `a`, etc) have thes
 - `target` - Target window ('_blank' for new window)
 - `preload` - Set to "true" to preload the URL
 
+### Header
+Creates a sticky header that stays at the top while scrolling.
+```xml
+<header>Regular Header</header>
+<header center>Centered Header</header>
+```
+Attributes:
+- `center` - Centers the header text
+
+The header component is useful for creating navigation bars or section titles that should remain visible while scrolling through content.
+
+### Back
+Creates a back navigation button. When used inside a header, displays as a round button. When used standalone, displays as a regular button with "Back" text.
+```xml
+<header>
+    <back href="/previous" />
+    Page Title
+</header>
+
+<!-- Or as standalone button -->
+<back href="/home" />
+```
+Attributes:
+- `href` - URL to navigate to (defaults to browser's back action if not specified)
+- `target` - Target window ('_blank' for new window)
+- `preload` - Set to "true" to preload the href URL
+
+### Footer
+Creates a sticky footer that stays at the bottom. Can automatically hide when scrolling down.
+```xml
+<footer>Regular Footer</footer>
+<footer autohide>Auto-hiding Footer</footer>
+```
+Attributes:
+- `autohide` - Makes the footer hide when scrolling down and show when scrolling up
+
+The footer component is useful for creating navigation bars or action buttons that should remain accessible while scrolling.
+
+### Pill
+Creates a small oval-shaped label. Multiple pills are automatically grouped horizontally.
+```xml
+<pill>Label 1</pill>
+<pill>Label 2</pill>
+<pill>Label 3</pill>
+```
+
+Pills are useful for displaying tags, categories, or status indicators. When multiple pills are used consecutively, they are automatically arranged horizontally with proper spacing.
+
+### W
+Makes text white, useful for highlighting text in descriptions.
+```xml
+<desc>Regular text <w>highlighted text</w> regular text</desc>
+```
+
 ## Examples
 
 Complete page example:
@@ -267,3 +324,65 @@ TKML works in all modern browsers that support:
 ## License
 
 MIT
+
+## Nginx Configuration
+
+To automatically wrap `.tkml` files in the HTML template when accessed directly (without proper headers), add this to your Nginx configuration:
+
+```nginx
+# Define variable to check if client accepts TKML
+map $http_accept $is_tkml {
+    "application/tkml"    1;
+    default              0;
+}
+
+server {
+    # ... your other server configuration ...
+
+    # Handle .tkml files
+    location ~ \.tkml$ {
+        if ($is_tkml = 0) {
+            # If not requesting TKML directly, wrap in HTML template
+            content_by_lua_block {
+                local file = io.open(ngx.var.request_filename, "r")
+                if file then
+                    local content = file:read("*all")
+                    file:close()
+                    
+                    local template = io.open(ngx.var.document_root .. "/wrap.html", "r")
+                    if template then
+                        local wrapper = template:read("*all")
+                        template:close()
+                        ngx.header.content_type = 'text/html'
+                        ngx.print(wrapper:gsub("{tkml_here}", content))
+                        return
+                    end
+                end
+                ngx.status = 404
+            }
+            break;
+        }
+        
+        # If requesting TKML directly, serve as is
+        default_type application/tkml;
+    }
+}
+```
+
+This configuration:
+1. Creates a map to check if the client accepts TKML content
+2. For `.tkml` files:
+   - If accessed directly (without `Accept: application/tkml` header), wraps content in HTML template
+   - If requested with proper headers, serves raw TKML content
+3. Requires `lua-nginx-module` to be installed
+
+Make sure to place `wrap.html` in your web root directory or adjust the path in the configuration.
+
+Note: You'll need to have Lua support in your Nginx installation. If you don't have it, you can install it via:
+```bash
+# For Ubuntu/Debian
+apt-get install nginx-extras
+
+# For CentOS/RHEL
+yum install nginx-mod-http-lua
+```

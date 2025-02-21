@@ -1,21 +1,68 @@
+:root {
+    /* Основные цвета */
+    --background-primary: #EFEEF3;
+    --background-secondary: #1d2633;
+    --background-hover: #252f3d;
+
+    /* Текст */
+    --text-primary: #fff;
+    --text-secondary: #8994a3;
+    --text-dark: #333;
+
+    /* Акцентные цвета */
+    --accent-primary: #45aef5;
+    --accent-hover: #3d9cdb;
+
+    /* Вспомогательные цвета */
+    --border-color: rgba(255, 255, 255, 0.1);
+    --overlay-light: rgba(255, 255, 255, 0.1);
+    --overlay-light-hover: rgba(255, 255, 255, 0.15);
+    --overlay-light-active: rgba(255, 255, 255, 0.2);
+
+    /* Цвета для состояний */
+    --error-color: #ff4141;
+    --undefined-color: #9a22ef;
+}
+
+/* Темная тема */
+html.dark {
+    --background-primary: #10161F;
+}
+
+body {
+    margin: 0px;
+}
+
 .tkml-cont {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
 }
 
 .undefined {
-    border: 1px solid #ff4141;
+    border: 1px solid var(--undefined-color);
     padding: 10px;
     margin: 5px 0;
 }
 
 .undefined .error {
-    color: #ff4141;
+    color: var(--undefined-color);
+    font-size: 12px;
+    margin-bottom: 5px;
+}
+
+.panic {
+    border: 1px solid var(--error-color);
+    padding: 10px;
+    margin: 5px 0;
+}
+
+.panic .error {
+    color: var(--error-color);
     font-size: 12px;
     margin-bottom: 5px;
 }
 
 html {
-    background-color: #EFEEF3;
+    background-color: var(--background-primary);
 }
 
 .title {
@@ -23,7 +70,7 @@ html {
     font-size: 24px;
     font-weight: bold;
     margin: 10px 0;
-    color: #333;
+    color: var(--text-dark);
 }
 
 .title.center {
@@ -32,13 +79,13 @@ html {
 
 .button {
     margin: 10px 0;
-    background-color: #45aef5;
-    color: #fff;
+    background-color: var(--accent-primary);
+    color: var(--text-primary);
     border: none;
     position: relative;
     user-select: none;
     border-radius: 16px;
-    padding: 15.5px 20px 16.5px;
+    padding: 16px 20px 16px;
     text-align: center;
     cursor: pointer;
     flex-direction: column;
@@ -93,7 +140,7 @@ html {
 }
 
 .list {
-    background-color: #1d2633;
+    background-color: var(--background-secondary);
     border-radius: 14px;
     padding: 0px;
     margin: 16px 0px;
@@ -102,11 +149,11 @@ html {
 
 .list-item {
     padding: 8px 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid var(--border-color);
     padding: 11px 16px 14px;
 }
 
-.list-item.info-section {
+.list-section {
     padding: 0px;
 }
 
@@ -115,7 +162,7 @@ html {
 }
 
 a {
-    color: #fff;
+    color: var(--text-primary);
     position: relative;
     transition: opacity 0.2s ease;
 }
@@ -123,9 +170,9 @@ a {
 a.loading {
     pointer-events: none;
     background: linear-gradient(90deg,
-            #fff 0%,
-            #45aef5 50%,
-            #fff 100%);
+            var(--text-primary) 0%,
+            var(--accent-primary) 50%,
+            var(--text-primary) 100%);
     background-size: 200% 100%;
     -webkit-background-clip: text;
     background-clip: text;
@@ -144,12 +191,12 @@ a.loading {
 }
 
 html.dark {
-    background-color: #10161F;
-    color: #fff;
+    background-color: var(--background-primary);
+    color: var(--text-primary);
 }
 
 .desc {
-    color: #8994a3;
+    color: var(--text-secondary);
     font-size: 14px;
 }
 
@@ -158,11 +205,11 @@ html.dark {
 }
 
 .desc a {
-    color: #8994a3
+    color: var(--text-secondary)
 }
 
 .dark .title {
-    color: #fff;
+    color: var(--text-primary);
 }
 
 .input-wrapper {
@@ -171,11 +218,11 @@ html.dark {
 }
 
 .input {
-    background-color: #1d2633;
+    background-color: var(--background-secondary);
     border: none;
     border-radius: 12px;
     padding: 12px 16px;
-    color: #fff;
+    color: var(--text-primary);
     font-size: 16px;
     line-height: 24px;
     width: 100%;
@@ -190,8 +237,8 @@ html.dark {
 
 .input:focus {
     outline: none;
-    background-color: rgba(255, 255, 255, 0.15);
-    box-shadow: 0 0 0 2px #fff;
+    background-color: var(--overlay-light);
+    box-shadow: 0 0 0 2px var(--text-primary);
 
     ::placeholder {
         color: rgba(255, 255, 255, 0.7);
@@ -200,13 +247,12 @@ html.dark {
 }
 
 .input:focus::placeholder {
-    color: rgba(255, 255, 255, 0.2);
+    color: var(--overlay-light-active);
 }
 
 .dark .input {
-    background-color: #1d2633;
+    background-color: var(--background-secondary);
 }
-
 
 .input-wrapper.loading .input {
     padding-right: 40px;
@@ -221,8 +267,8 @@ html.dark {
     top: 50%;
     margin-top: -8px;
     border-radius: 50%;
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    border-top-color: white;
+    border: 2px solid var(--overlay-light);
+    border-top-color: var(--text-primary);
     animation: button-spinner 0.6s linear infinite;
     opacity: 0;
     pointer-events: none;
@@ -238,7 +284,7 @@ html.dark {
 .code {
     margin: 16px 0;
     border-radius: 8px;
-    background: #282c34;
+    background: var(--background-secondary);
     overflow: auto;
 }
 
@@ -252,9 +298,9 @@ html.dark {
 }
 
 .info {
-    background-color: #1d2633;
+    background-color: var(--background-secondary);
     border-radius: 14px;
-    padding: 0px 0px 10px 0px;
+    padding: 6px 0px 6px 0px;
     margin: 16px 0px;
     overflow: hidden;
 }
@@ -271,8 +317,13 @@ html.dark {
     overflow: hidden;
 }
 
+.info-item.info-img:first-child {
+    margin-top: -6px;
+}
+
+
 .info-title .title {
-    margin: 0px;
+    margin: 15px 0px 0px;
 }
 
 .info-desc .desc {
@@ -282,6 +333,20 @@ html.dark {
 .info-item .img {
     border-radius: 0px;
     width: 100%;
+    height: 200px;
+}
+
+.info-section {
+    padding: 0px;
+}
+
+.info-section .section {
+    padding: 6px 16px;
+}
+
+.info-section .section-content {
+    display: flex;
+    align-items: center;
 }
 
 .img {
@@ -314,8 +379,12 @@ html.dark {
     padding: 3px 0px;
 }
 
-.list-item .checkbox {
+.list-checkbox {
     padding: 0px;
+}
+
+.list-item .checkbox {
+    padding: 11px 16px 14px;
 }
 
 .checkbox.loading {
@@ -323,7 +392,7 @@ html.dark {
 }
 
 .checkbox-label {
-    color: #fff;
+    color: var(--text-primary);
     font-size: 16px;
     line-height: 24px;
     margin-right: 12px;
@@ -333,14 +402,14 @@ html.dark {
     position: relative;
     width: 51px;
     height: 31px;
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--overlay-light);
     border-radius: 34px;
     transition: background 0.2s;
     flex-shrink: 0;
 }
 
 .checkbox.checked .checkbox-toggle {
-    background: #45aef5;
+    background: var(--accent-primary);
 }
 
 .checkbox-slider {
@@ -350,7 +419,7 @@ html.dark {
     width: 27px;
     left: 2px;
     bottom: 2px;
-    background-color: white;
+    background-color: var(--text-primary);
     border-radius: 50%;
     transition: transform 0.2s;
     box-sizing: border-box;
@@ -361,18 +430,17 @@ html.dark {
 }
 
 .checkbox:hover .checkbox-toggle {
-    background: rgba(255, 255, 255, 0.15);
+    background: var(--overlay-light-hover);
 }
 
 .checkbox.checked:hover .checkbox-toggle {
-    background: #3d9cdb;
+    background: var(--accent-hover);
 }
 
 .section {
-    background: #1d2633;
-    border-radius: 14px;
+    background: var(--background-secondary);
     padding: 0 16px;
-    color: #fff;
+    color: var(--text-primary);
     font-size: 16px;
     line-height: 24px;
     min-height: 52px;
@@ -381,8 +449,19 @@ html.dark {
     position: relative;
 }
 
+.section.deactivated {
+    color: var(--text-secondary);
+}
+
 .list-item .section {
     border-radius: 0px;
+}
+
+.section .img {
+    width: 50px;
+    height: 50px;
+    float: left;
+    margin-right: 16px;
 }
 
 .section.clickable {
@@ -394,7 +473,7 @@ html.dark {
 }
 
 .section.clickable:hover {
-    background: #252f3d;
+    background: var(--background-hover);
 }
 
 .section.loading {
@@ -411,6 +490,7 @@ html.dark {
     width: 24px;
     height: 24px;
     margin-left: 16px;
+    margin-right: 10px;
     flex-shrink: 0;
     position: relative;
 }
@@ -422,15 +502,15 @@ html.dark {
     top: 50%;
     width: 8px;
     height: 8px;
-    border-top: 2px solid rgba(255, 255, 255, 0.5);
-    border-right: 2px solid rgba(255, 255, 255, 0.5);
+    border-top: 2px solid var(--overlay-light);
+    border-right: 2px solid var(--overlay-light);
     transform: translateY(-50%) rotate(45deg);
     opacity: 1;
     transition: opacity 0.2s;
 }
 
 .section.clickable:hover .section-arrow:after {
-    border-color: rgba(255, 255, 255, 0.8);
+    border-color: var(--overlay-light-hover);
 }
 
 .radio {
@@ -443,8 +523,12 @@ html.dark {
     padding: 3px 0px;
 }
 
-.list-item .radio {
+.list-radio {
     padding: 0px;
+}
+
+.list-item .radio {
+    padding: 11px 16px 14px;
 }
 
 .radio.loading {
@@ -452,7 +536,7 @@ html.dark {
 }
 
 .radio-label {
-    color: #fff;
+    color: var(--text-primary);
     font-size: 16px;
     line-height: 24px;
     margin-right: 12px;
@@ -462,14 +546,14 @@ html.dark {
     position: relative;
     width: 24px;
     height: 24px;
-    border: 2px solid rgba(255, 255, 255, 0.2);
+    border: 2px solid var(--overlay-light);
     border-radius: 50%;
     transition: all 0.2s;
     flex-shrink: 0;
 }
 
 .radio.checked .radio-toggle {
-    border-color: #45aef5;
+    border-color: var(--accent-primary);
 }
 
 .radio-dot {
@@ -479,7 +563,7 @@ html.dark {
     left: 50%;
     top: 50%;
     margin: -6px 0 0 -6px;
-    background: #45aef5;
+    background: var(--accent-primary);
     border-radius: 50%;
     transform: scale(0);
     transition: transform 0.2s;
@@ -490,11 +574,11 @@ html.dark {
 }
 
 .radio:hover .radio-toggle {
-    border-color: rgba(255, 255, 255, 0.4);
+    border-color: var(--overlay-light-hover);
 }
 
 .radio.checked:hover .radio-toggle {
-    border-color: #3d9cdb;
+    border-color: var(--accent-hover);
 }
 
 .radio.loading .radio-toggle {
@@ -510,8 +594,8 @@ html.dark {
     top: 50%;
     margin: -14px 0 0 -14px;
     border-radius: 50%;
-    border: 2px solid white;
-    border-top-color: #3d9cdb;
+    border: 2px solid var(--text-primary);
+    border-top-color: var(--accent-hover);
     animation: button-spinner 0.6s linear infinite;
 }
 
@@ -520,8 +604,6 @@ html.dark {
     height: 32px;
     margin-left: 16px;
     flex-shrink: 0;
-    opacity: 0.8;
-    transition: opacity 0.2s;
     object-fit: contain;
 }
 
@@ -554,8 +636,8 @@ html.dark {
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    border: 3px solid rgba(255, 255, 255, 0.1);
-    border-top-color: #45aef5;
+    border: 3px solid var(--overlay-light);
+    border-top-color: var(--accent-primary);
     animation: button-spinner 0.6s linear infinite;
 }
 
@@ -573,7 +655,203 @@ html.dark {
     top: 50%;
     margin: -10px 0 0 -10px;
     border-radius: 50%;
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    border-top-color: white;
+    border: 2px solid var(--overlay-light);
+    border-top-color: var(--text-primary);
     animation: button-spinner 0.6s linear infinite;
+}
+
+.header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    font-size: 24px;
+    font-weight: bold;
+    padding: 16px 62px;
+    margin: -20px -20px 10px -20px;
+    color: var(--text-primary);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid transparent;
+    align-items: center;
+    min-height: 32px;
+    transition: border-color 0.2s;
+}
+
+.header.scrolled {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.header.center {
+    text-align: center;
+}
+
+.header-back {
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    border-radius: 50%;
+    background: var(--overlay-light);
+    transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    left: 16px;
+    margin-right: 14px;
+    position: absolute;
+}
+
+.header-back:hover {
+    background: var(--overlay-light-hover);
+}
+
+.header-back:before {
+    content: '';
+    width: 10px;
+    height: 10px;
+    border-left: 2px solid var(--text-primary);
+    border-bottom: 2px solid var(--text-primary);
+    transform: translateX(2px) rotate(45deg);
+}
+
+.back-button {
+    display: inline-flex;
+    align-items: center;
+    padding-left: 44px;
+    position: relative;
+}
+
+.back-button:before {
+    content: '';
+    position: absolute;
+    left: 20px;
+    top: 50%;
+    width: 10px;
+    height: 10px;
+    border-left: 2px solid var(--text-primary);
+    border-bottom: 2px solid var(--text-primary);
+    transform: rotate(45deg);
+}
+
+.header-back.loading:before {
+    content: '';
+    width: 16px;
+    height: 16px;
+    left: 50%;
+    top: 50%;
+    margin: 0px;
+    border-radius: 50%;
+    border: 2px solid var(--overlay-light);
+    border-top-color: var(--text-primary);
+    animation: back-spinner 0.6s linear infinite;
+    transform: translateY(0%) rotate(0deg);
+}
+
+.header-back.loading:after {
+    display: none;
+    /* Hide arrow when loading */
+}
+
+@keyframes back-spinner {
+    to {
+        transform: translateY(0%) rotate(360deg);
+    }
+}
+
+.footer {
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    font-size: 16px;
+    padding: 2px 20px;
+    color: var(--text-primary);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    transition: transform 0.15s ease, border-color 0.2s;
+    margin: 0px -20px 10px;
+    border-top: 1px solid var(--border-color);
+}
+
+.footer.down {
+    border-top-color: transparent;
+}
+
+.footer.autohide {
+    transform: translateY(0);
+}
+
+.footer.autohide.hidden {
+    transform: translateY(100%);
+    border-top-color: transparent;
+}
+
+/* Add padding to container when footer is present */
+.tkml-cont:has(.footer) {
+    padding-bottom: 80px;
+}
+
+.pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 12px;
+    background: #2E3847;
+    border-radius: 16px;
+    color: #fff;
+    font-size: 14px;
+    line-height: 20px;
+    white-space: nowrap;
+    margin-right: 8px;
+}
+
+.pill-icon {
+    width: 22px;
+    height: 22px;
+    margin-left: 6px;
+    object-fit: contain;
+}
+
+.pill:last-child {
+    margin-right: 0;
+}
+
+/* Container для группировки pills */
+.pills-container {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 4px 0;
+    margin: 0 -20px;
+    padding: 4px 20px;
+    scrollbar-width: none;
+    /* Firefox */
+    -ms-overflow-style: none;
+    /* IE and Edge */
+}
+
+.pills-container::-webkit-scrollbar {
+    display: none;
+    /* Chrome, Safari and Opera */
+}
+
+.info-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 16px;
+}
+
+.info-group .pill {
+    margin-right: 0;
+    /* Отключаем стандартный margin для pill внутри группы */
+}
+
+.info-group .pills-container {
+    margin: 0;
+    padding: 0;
+}
+
+.w {
+    color: #fff;
+    display: inline;
 }

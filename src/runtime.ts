@@ -13,6 +13,7 @@ export class Runtime {
     private static highlightJsLoaded = false;
     private static loadingPromise: Promise<void> | null = null;
     private observers: Map<string, IntersectionObserver> = new Map();
+    private footerState: Map<string, { lastScrollY: number, direction: 'up' | 'down' }> = new Map();
 
     constructor(tkmlInstance: TKML) {
         this.instanceId = ++Runtime.counter;
@@ -22,11 +23,15 @@ export class Runtime {
         window.addEventListener('popstate', (event) => {
             const params = new URLSearchParams(window.location.search);
             const loadUrl = params.get('l');
+            console.log('popstate!!', loadUrl);
+            console.log('history', this.initialUrl);
 
             if (loadUrl) {
                 this.load(decodeURIComponent(loadUrl), false);
-            } else if (this.initialUrl) {
+            } else if (this.tkmlInstance.rootUrl) {
                 // Return to initial page if no 'l' parameter
+                this.load(this.tkmlInstance.rootUrl, false);
+            } else if (this.initialUrl) {
                 this.load(this.initialUrl, false);
             }
         });
@@ -222,6 +227,80 @@ export class Runtime {
     public cleanup() {
         this.observers.forEach(observer => observer.disconnect());
         this.observers.clear();
+    }
+
+    public observeFooter(footerId: string): void {
+        const footer = document.getElementById(footerId);
+        if (!footer) return;
+
+        let lastScrollY = window.scrollY;
+        let ticking = false;
+        let currentDirection: 'up' | 'down' = 'up';
+
+        const updateFooter = () => {
+            const currentScrollY = window.scrollY;
+            const newDirection = currentScrollY > lastScrollY ? 'down' : 'up';
+
+            // Проверяем, достигли ли конца страницы
+            const isAtBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 100;
+
+            if (isAtBottom) {
+                // Если достигли конца - показываем футер
+                footer.classList.remove('hidden');
+                footer.classList.add('down');
+            } else {
+                footer.classList.remove('down');
+                if (newDirection !== currentDirection) {
+                    // Иначе обрабатываем направление скролла
+                    currentDirection = newDirection;
+                    if (currentDirection === 'down') {
+                        footer.classList.add('hidden');
+                    } else {
+                        footer.classList.remove('hidden');
+                    }
+                }
+            }
+
+            lastScrollY = currentScrollY;
+            ticking = false;
+        };
+
+        window.addEventListener('scroll', () => {
+            if (!ticking) {
+                window.requestAnimationFrame(updateFooter);
+                ticking = true;
+            }
+        });
+
+        // Инициализируем начальное состояние
+        updateFooter();
+        this.footerState.set(footerId, { lastScrollY, direction: 'down' });
+    }
+
+    public observeHeader(headerId: string): void {
+        const header = document.getElementById(headerId);
+        if (!header) return;
+
+        let ticking = false;
+        const updateHeader = () => {
+            const scrollY = window.scrollY;
+            if (scrollY > 0) {
+                header.classList.add('scrolled');
+            } else {
+                header.classList.remove('scrolled');
+            }
+            ticking = false;
+        };
+
+        window.addEventListener('scroll', () => {
+            if (!ticking) {
+                window.requestAnimationFrame(updateHeader);
+                ticking = true;
+            }
+        });
+
+        // Инициализируем начальное состояние
+        updateHeader();
     }
 }
 
