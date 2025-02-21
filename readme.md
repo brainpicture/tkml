@@ -379,3 +379,33 @@ This configuration:
 4. No additional modules required
 
 The solution works by wrapping the response content in HTML template using `sub_filter` directives to add content before and after the TKML file content.
+
+### Standard HTML Tags
+TKML supports several standard HTML tags for text formatting:
+
+```xml
+<b>Bold text</b>
+<i>Italic text</i>
+<u>Underlined text</u>
+<s>Strikethrough text</s>
+```
+
+These tags work exactly like their HTML counterparts and can be used within any text content. For example:
+
+```xml
+<desc>
+    This is <b>bold</b> and this is <i>italic</i>.
+    You can also <u>underline</u> or <s>strike through</s> text.
+    These tags can be <b><i>combined</i></b> as needed.
+</desc>
+
+<section>
+    Regular text with <b>bold emphasis</b>
+</section>
+
+<title>
+    Title with <i>italic part</i>
+</title>
+```
+
+The tags maintain consistent styling with the rest of your TKML content while providing familiar HTML text formatting options.
