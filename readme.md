@@ -342,9 +342,12 @@ server {
     # Handle .tkml files
     location ~ \.tkml$ {
         if ($is_tkml = 0) {
-            # If not requesting TKML directly, return wrapped content
+            # If not requesting TKML directly, transform the response
+            sub_filter_types application/tkml;
+            sub_filter_once on;
             add_header Content-Type text/html;
-            return 200 '<!DOCTYPE html>
+            sub_filter_types *;
+            sub_filter '^' '<!DOCTYPE html>
 <html>
 <head>
     <link rel="stylesheet" href="https://tkml.app/styles.min.css">
@@ -355,7 +358,8 @@ server {
     <script>
         const container = document.getElementById("container");
         const tkml = new TKML(container, { dark: true });
-        tkml.fromText(`$request_uri`);
+        tkml.fromText(`';
+            sub_filter '$' '`);
     </script>
     </div>
 </body>
@@ -369,9 +373,9 @@ server {
 ```
 
 This configuration:
-1. Uses a single Nginx config file without requiring additional template files
-2. Automatically wraps .tkml content when accessed directly in browser
+1. Uses only standard Nginx modules (sub_filter)
+2. Automatically wraps TKML content when accessed directly in browser
 3. Serves raw TKML when requested with proper headers
-4. Requires no additional modules or files
+4. No additional modules required
 
-Note: This is the simplest possible setup, though it might need adjustments depending on your specific needs (like handling special characters in TKML content).
+The solution works by wrapping the response content in HTML template using `sub_filter` directives to add content before and after the TKML file content.
