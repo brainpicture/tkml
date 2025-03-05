@@ -73,6 +73,12 @@ html {
     color: var(--text-dark);
 }
 
+.section .title {
+    font-size: 18px;
+    margin: 0;
+    color: inherit;
+}
+
 .title.center {
     text-align: center;
 }
@@ -103,6 +109,21 @@ html {
     &+.button {
         margin-left: 10px;
     }
+}
+
+.button.secondary {
+    background-color: var(--background-secondary);
+    box-shadow: none;
+}
+
+.button.secondary:hover {
+    background-color: var(--background-hover);
+    box-shadow: none;
+}
+
+.button.secondary:active {
+    transform: translateY(1px);
+    box-shadow: none;
 }
 
 .button:hover {
@@ -357,6 +378,11 @@ html.dark {
     height: var(--img-height, auto);
     object-fit: cover;
     width: 100%;
+}
+
+.img.circle {
+    border-radius: 50%;
+    aspect-ratio: 1/1;
 }
 
 .info-button .button {
@@ -854,4 +880,261 @@ html.dark {
 .w {
     color: #fff;
     display: inline;
+}
+
+.br {
+    display: block;
+}
+
+.br.small {
+    height: 10px;
+}
+
+.bubble {
+    display: flex;
+    flex-direction: column;
+    max-width: 80%;
+    margin: 8px 0;
+    gap: 4px;
+}
+
+.bubble-in {
+    align-self: flex-start;
+}
+
+.bubble-out {
+    align-self: flex-end;
+}
+
+.bubble-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.bubble-avatar {
+    width: 32px;
+    height: 32px;
+}
+
+.bubble-avatar .img {
+    width: 32px;
+    height: 32px;
+}
+
+.bubble-title .title {
+    font-size: 14px;
+    margin: 0;
+    color: var(--text-secondary);
+}
+
+.bubble-content {
+    background: var(--background-secondary);
+    padding: 12px 16px;
+    border-radius: 16px;
+    color: var(--text-primary);
+    font-size: 16px;
+    line-height: 24px;
+}
+
+.bubble-in .bubble-content {
+    border-top-left-radius: 4px;
+}
+
+.bubble-out .bubble-content {
+    border-top-right-radius: 4px;
+    background: var(--accent-primary);
+}
+
+/* Контейнер для пузырей сообщений */
+.tkml-cont:has(.bubble) {
+    display: flex;
+    flex-direction: column;
+}
+
+.label {
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 20px;
+    margin: 16px 0 8px;
+    display: block;
+}
+
+.label:first-child {
+    margin-top: 0;
+}
+
+.textarea {
+    background-color: var(--background-secondary);
+    border: none;
+    border-radius: 12px;
+    padding: 12px 16px;
+    color: var(--text-primary);
+    font-size: 16px;
+    line-height: 24px;
+    width: 100%;
+    box-sizing: border-box;
+    transition: all 0.2s ease;
+    position: relative;
+    resize: none;
+    font-family: inherit;
+    min-height: 120px;
+}
+
+.textarea::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.textarea:focus {
+    outline: none;
+    background-color: var(--overlay-light);
+    box-shadow: 0 0 0 2px var(--text-primary);
+}
+
+.textarea:focus::placeholder {
+    color: var(--overlay-light-active);
+}
+
+.msg {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    margin: 8px 0;
+    font-size: 14px;
+    line-height: 20px;
+}
+
+.msg-icon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    position: relative;
+}
+
+.msg-icon::before,
+.msg-icon::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+}
+
+/* Success style */
+.msg-success {
+    background: rgba(52, 199, 89, 0.1);
+    color: #34C759;
+}
+
+.msg-success .msg-icon {
+    background: #34C759;
+}
+
+.msg-success .msg-icon::before {
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    height: 10px;
+    margin: -7px 0 0 -3px;
+    transform: rotate(45deg);
+    width: 5px;
+}
+
+/* Error style */
+.msg-error {
+    background: rgba(255, 59, 48, 0.1);
+    color: #FF3B30;
+}
+
+.msg-error .msg-icon {
+    background: #FF3B30;
+}
+
+.msg-error .msg-icon::before,
+.msg-error .msg-icon::after {
+    width: 12px;
+    height: 2px;
+    background: white;
+    margin: -1px 0 0 -6px;
+}
+
+.msg-error .msg-icon::before {
+    transform: rotate(45deg);
+}
+
+.msg-error .msg-icon::after {
+    transform: rotate(-45deg);
+}
+
+/* Warning style */
+.msg-warning {
+    background: rgba(255, 204, 0, 0.1);
+    color: #FFCC00;
+}
+
+.msg-warning .msg-icon {
+    background: #FFCC00;
+}
+
+.msg-warning .msg-icon::before {
+    width: 2px;
+    height: 8px;
+    background: white;
+    margin: -6px 0 0 -1px;
+}
+
+.msg-warning .msg-icon::after {
+    width: 2px;
+    height: 2px;
+    background: white;
+    margin: 3px 0 0 -1px;
+    border-radius: 50%;
+}
+
+/* Info style */
+.msg-info {
+    background: rgba(69, 174, 245, 0.1);
+    color: var(--accent-primary);
+}
+
+.msg-info .msg-icon {
+    background: var(--accent-primary);
+}
+
+.msg-info .msg-icon::before {
+    width: 2px;
+    height: 8px;
+    background: white;
+    margin: -4px 0 0 -1px;
+}
+
+.msg-info .msg-icon::after {
+    width: 2px;
+    height: 2px;
+    background: white;
+    margin: -8px 0 0 -1px;
+    border-radius: 50%;
+}
+
+
+.input.error,
+.textarea.error {
+    box-shadow: 0 0 0 2px var(--error-color);
+}
+
+.input.error:focus,
+.textarea.error:focus {
+    box-shadow: 0 0 0 2px var(--text-primary);
+}
+
+/* Remove error state when user starts typing */
+.input:focus,
+.textarea:focus {
+    box-shadow: 0 0 0 2px var(--text-primary);
+}
+
+.input:not(:placeholder-shown),
+.textarea:not(:placeholder-shown) {
+    box-shadow: none;
 }

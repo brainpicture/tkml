@@ -74,15 +74,27 @@ Attributes:
 ### Button
 Creates a clickable button.
 ```xml
-<button href="/action">Click Me</button>
+<button href="/action">Primary Button</button>
+<button type="secondary" href="/back">Secondary Button</button>
 <button width="200">Fixed Width Button</button>
 <button width="100%">Full Width Button</button>
+<button required="field1,field2" href="/submit">Submit</button>
 ```
 Attributes:
 - `href` - URL to navigate to when clicked
 - `target` - Target window ('_blank' for new window)
 - `preload` - Set to "true" to preload the href URL
 - `width` - Button width in pixels or percentage (e.g. "200" or "100%")
+- `type` - Button style: "secondary" for dark background (default: primary)
+- `required` - Comma-separated list of required field names to validate before navigation
+
+Example form with required fields:
+```xml
+<input name="to" placeholder="Enter name or address" />
+<label>Message</label>
+<textarea name="message" placeholder="Enter message" rows="10"></textarea>
+<button required="to,message" width="100%" href="./messenger-sent.tkml">Send</button>
+```
 
 ### Input
 Creates a text input field.
@@ -166,11 +178,13 @@ Attributes:
 Displays an image.
 ```xml
 <img src="/image.jpg" alt="Description" height="200" />
+<img src="/avatar.jpg" circle /> <!-- Circular image, perfect for avatars -->
 ```
 Attributes:
 - `src` - Image URL
 - `alt` - Alternative text
 - `height` - Fixed height in pixels
+- `circle` - Makes the image circular (forces 1:1 aspect ratio)
 
 ### Loader
 Creates a loading indicator that loads content when visible.
@@ -202,8 +216,12 @@ Basic text formatting tags:
 ### Line Break
 Adds vertical spacing:
 ```xml
-<br/>
+<br/>           <!-- Default break (20px) -->
+<br size="10"/> <!-- Custom size break -->
+<br size="40"/> <!-- Larger break -->
 ```
+Attributes:
+- `size` - Custom break height in pixels (default: 20)
 
 All components that support navigation (`button`, `section`, `a`, etc) have these common attributes:
 - `href` - URL to navigate to
@@ -262,6 +280,73 @@ Pills are useful for displaying tags, categories, or status indicators. When mul
 Makes text white, useful for highlighting text in descriptions.
 ```xml
 <desc>Regular text <w>highlighted text</w> regular text</desc>
+```
+
+### Bubble
+Creates a message bubble like in messenger apps.
+```xml
+<bubble type="in">
+    <img src="./john.jpg" circle="true" />
+    <title>John Doe</title>
+    Hello, how are you?
+</bubble>
+<bubble type="out">
+    <img src="./rachiel.jpg" circle="true" />
+    <title>Me</title>
+    I'm fine, thank you!
+</bubble>
+```
+Attributes:
+- `type` - Message type: "in" for incoming or "out" for outgoing messages (default: "in")
+
+The bubble component automatically handles:
+- Avatar image (using `<img>` tag)
+- Sender name (using `<title>` tag)
+- Message content (any other content)
+- Proper alignment (left for incoming, right for outgoing)
+- Message bubble styling with rounded corners
+
+### Label
+Creates a form label.
+```xml
+<label>Field Name</label>
+```
+
+### Textarea
+Creates a multi-line text input.
+```xml
+<textarea name="message" placeholder="Enter message" rows="10" />
+```
+Attributes:
+- `placeholder` - Placeholder text
+- `value` - Initial value
+- `rows` - Number of visible text rows
+- `href` - URL to submit to on Ctrl+Enter
+- `name` - Parameter name for the submitted value
+
+Example of a form layout:
+```xml
+<label>To</label>
+<input name="to" placeholder="Enter name or address" />
+<label>Message</label>
+<textarea name="message" placeholder="Enter message" rows="10" />
+```
+
+### Msg
+Creates a notification message with different styles.
+```xml
+<msg type="success">Operation completed successfully</msg>
+<msg type="error">Something went wrong</msg>
+<msg type="warning">Please be careful</msg>
+<msg type="info">Just letting you know</msg>
+```
+Attributes:
+- `type` - Message type: "success", "error", "warning", or "info" (default: "info")
+
+Example usage:
+```xml
+<msg type="success">Message sent successfully</msg>
+<button width="100%" href="messenger.tkml">Back to messages</button>
 ```
 
 ## Examples

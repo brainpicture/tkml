@@ -14,6 +14,7 @@ export class Runtime {
     private static loadingPromise: Promise<void> | null = null;
     private observers: Map<string, IntersectionObserver> = new Map();
     private footerState: Map<string, { lastScrollY: number, direction: 'up' | 'down' }> = new Map();
+    private aborted: boolean = false;
 
     constructor(tkmlInstance: TKML) {
         this.instanceId = ++Runtime.counter;
@@ -49,11 +50,23 @@ export class Runtime {
         this.cache.set(url, content);
     }
 
-    public go(url: string, noCache: boolean = false, target?: string, rootElement?: Component) {
+    private resetState(): void {
+        this.aborted = false;
+    }
+
+    private abort(): Runtime {
+        this.aborted = true;
+        return this;
+    }
+
+    public go(url: string, noCache: boolean = false, target?: string, rootElement?: Component): void {
+        if (this.aborted) {
+            this.resetState(); // Reset for next use
+            return;
+        }
         url = decodeURIComponent(url);
         if (target) {
             noCache = true;
-            console.log('target NO CACHE', target);
         }
         this.load(url, true, undefined, noCache, target, rootElement);
     }
@@ -135,7 +148,8 @@ export class Runtime {
         }
     }
 
-    public loader(element: HTMLElement) {
+    public loader(element: HTMLElement): Runtime {
+        if (this.aborted) return this;
         element.classList.add('loading');
         return this;
     }
@@ -301,6 +315,37 @@ export class Runtime {
 
         // Инициализируем начальное состояние
         updateHeader();
+    }
+
+    public validateFields(fields: string): Runtime {
+        if (this.aborted) return this;
+
+        const fieldList = fields.split(',').map(f => f.trim());
+        let firstError: HTMLElement | null = null;
+
+        fieldList.forEach(field => {
+            const input = document.querySelector(`[name='${field}']`) as HTMLInputElement | null;
+            if (input && !input.value.trim()) {
+                input.classList.add('error');
+                if (!firstError) firstError = input as HTMLElement;
+
+                const removeError = () => {
+                    input.classList.remove('error');
+                    input.removeEventListener('input', removeError);
+                    input.removeEventListener('focus', removeError);
+                };
+
+                input.addEventListener('input', removeError);
+                input.addEventListener('focus', removeError);
+            }
+        });
+
+        if (firstError) {
+            (firstError as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'center' });
+            this.abort();
+        }
+
+        return this;
     }
 }
 

@@ -213,6 +213,7 @@ export class Error extends BaseComponent {
 // Title stands for <title> tag, has no attributes yet
 export class Title extends BaseComponent {
     tag = 'title';
+    canParent = ['tkml', 'section', 'bubble', 'info'];
 
     constructor(attributes?: Record<string, string>) {
         super(attributes);
@@ -277,12 +278,9 @@ ComponentFactory.register(Desc);
 export class Br extends BaseComponent {
     tag = 'br';
 
-    constructor() {
-        super();
-    }
-
     render(): string {
-        return `<br/>`;
+        const size = this.attributes['size'] ? parseInt(this.attributes['size']) : 20;
+        return `<div class="br" style="height: ${size}px"></div>`;
     }
 }
 ComponentFactory.register(Br);
@@ -290,37 +288,32 @@ ComponentFactory.register(Br);
 export class Button extends BaseComponent {
     tag = 'button';
 
-    constructor(attributes: Record<string, string>) {
-        super(attributes);
-    }
-
-    renderChildren(children: Component[]): string {
-        return this.renderText(children);
-    }
-
     render(): string {
         let attrs = this.getAttributes();
         let style = '';
+        let secondaryClass = this.attributes['type'] === 'secondary' ? ' secondary' : '';
 
-        // Обработка width
         if (this.attributes['width']) {
             const width = this.attributes['width'];
-            // Проверяем, содержит ли значение '%'
-            const isPercent = width.includes('%');
-            // Если это число без %, добавляем px
-            const value = isPercent ? width : `${parseInt(width)}px`;
-            style = ` style="width: ${value}"`;
+            style = ` style="width: ${width.match(/^\d+$/) ? width + 'px' : width}"`;
         }
 
         if (this.attributes['href']) {
             const url = encodeUrl(this.attributes['href']);
             const target = this.attributes['target'] ? `, '${safeIds(this.attributes['target'])}'` : '';
-            attrs += ` onclick="tkmlr(${this.runtime?.getId()}).loader(this).go('${url}'${target})"`;
+
+            const validation = this.attributes['required']
+                ? `.validateFields('${safeIds(this.attributes['required'])}')`
+                : '';
+
+            attrs += ` onclick="tkmlr(${this.runtime?.getId()})${validation}.loader(this).go('${url}'${target})"`;
+
+            if (this.attributes['preload'] === 'true') {
+                setTimeout(() => this.runtime?.preload(this.attributes['href']), 0);
+            }
         }
-        if (this.attributes['preload'] === 'true') {
-            setTimeout(() => this.runtime?.preload(this.attributes['href']), 0);
-        }
-        return `<button class="button"${attrs}${style}>${this.childs()}</button>`;
+
+        return `<button class="button${secondaryClass}"${attrs}${style}>${this.childs()}</button>`;
     }
 }
 ComponentFactory.register(Button);
@@ -407,6 +400,9 @@ export class Input extends BaseComponent {
         if (this.attributes['type']) {
             attrs += ` type="${safeAttr(this.attributes['type'])}"`;
         }
+        if (this.attributes['name']) {
+            attrs += ` name="${safeAttr(this.attributes['name'])}"`;
+        }
 
         if (this.attributes['href']) {
             const url = encodeUrl(this.attributes['href']);
@@ -482,6 +478,7 @@ export class Img extends BaseComponent {
     render(): string {
         let attrs = this.getAttributes();
         let style = '';
+        let circleClass = this.attributes['circle'] !== undefined ? ' circle' : '';
 
         if (this.attributes['src']) {
             const imgUrl = resolveUrl(this.attributes['src'], this.runtime);
@@ -493,7 +490,7 @@ export class Img extends BaseComponent {
         if (this.attributes['height']) {
             style = ` style="--img-height: ${parseInt(this.attributes['height'])}px"`;
         }
-        return `<img class="img"${attrs}${style}/>`;
+        return `<img class="img${circleClass}"${attrs}${style}/>`;
     }
 }
 
@@ -746,3 +743,103 @@ export class W extends BaseComponent {
     }
 }
 ComponentFactory.register(W);
+
+export class Bubble extends BaseComponent {
+    tag = 'bubble';
+
+    render(): string {
+        const type = this.attributes['type'] || 'in';
+        const bubbleClass = `bubble-${type}`;
+        let attrs = this.getAttributes();
+
+        return `
+            <div class="bubble ${bubbleClass}"${attrs}>
+                <div class="bubble-header">
+                    <div class="bubble-avatar">
+                        ${this.renderAvatar()}
+                    </div>
+                    <div class="bubble-title">
+                        ${this.renderTitle()}
+                    </div>
+                </div>
+                <div class="bubble-content">
+                    ${this.renderContent()}
+                </div>
+            </div>
+        `;
+    }
+
+    private renderAvatar(): string {
+        const imgComponent = this.children.find(child => child.tag === 'img');
+        return imgComponent ? imgComponent.render() : '';
+    }
+
+    private renderTitle(): string {
+        const titleComponent = this.children.find(child => child.tag === 'title');
+        return titleComponent ? titleComponent.render() : '';
+    }
+
+    private renderContent(): string {
+        return this.children
+            .filter(child => !['img', 'title'].includes(child.tag))
+            .map(child => child.render())
+            .join('');
+    }
+}
+
+ComponentFactory.register(Bubble);
+
+export class Label extends BaseComponent {
+    tag = 'label';
+
+    render(): string {
+        let attrs = this.getAttributes();
+        return `<div class="label"${attrs}>${this.childs()}</div>`;
+    }
+}
+ComponentFactory.register(Label);
+
+export class Textarea extends BaseComponent {
+    tag = 'textarea';
+
+    render(): string {
+        let attrs = this.getAttributes();
+        if (this.attributes['placeholder']) {
+            attrs += ` placeholder="${this.attributes['placeholder']}"`;
+        }
+        if (this.attributes['value']) {
+            attrs += ` value="${safeAttr(this.attributes['value'])}"`;
+        }
+        if (this.attributes['rows']) {
+            attrs += ` rows="${parseInt(this.attributes['rows'])}"`;
+        }
+        if (this.attributes['name']) {
+            attrs += ` name="${safeAttr(this.attributes['name'])}"`;
+        }
+
+        if (this.attributes['href']) {
+            const url = encodeUrl(this.attributes['href']);
+            const paramName = this.attributes['name'] || 'textarea';
+            attrs += ` onkeydown="if(event.key==='Enter' && event.ctrlKey){tkmlr(${this.runtime?.getId()}).loader(this.parentElement).post('${url}', {${safeAttr(paramName)}: this.value}, 'application/json')}"`;
+        }
+
+        return `<div class="input-wrapper"><textarea class="textarea"${attrs}></textarea><div class="input-spinner"></div></div>`;
+    }
+}
+ComponentFactory.register(Textarea);
+
+export class Msg extends BaseComponent {
+    tag = 'msg';
+
+    render(): string {
+        let attrs = this.getAttributes();
+        const type = this.attributes['type'] || 'info';
+        const msgClass = `msg-${type}`;
+
+        return `<div class="msg ${msgClass}"${attrs}>
+            <div class="msg-icon"></div>
+            <div class="msg-content">${this.childs()}</div>
+        </div>`;
+    }
+}
+ComponentFactory.register(Msg);
