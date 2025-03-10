@@ -1,3 +1,5 @@
+.PHONY: ssr
+
 all:
 	npm run pack
 
@@ -12,9 +14,11 @@ push:
 	npm run pack
 	# Copy project files
 	ssh root@prod 'mkdir -p /var/www/tkml'
-	scp dist/index.html root@prod:/var/www/tkml/index.html
-	scp dist/tkml.min.js root@prod:/var/www/tkml/tkml.min.js
-	scp dist/styles.min.css root@prod:/var/www/tkml/styles.min.css
+	rsync -avz dist/* root@prod:/var/www/tkml/
+	rsync -avz ssr/* root@prod:./tkml/
+
+ssr:
+	rsync -avz ssr/* root@prod:./tkml/
 
 push-all: push
 	# Copy nginx config directly to sites-enabled and reload nginx

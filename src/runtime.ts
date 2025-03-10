@@ -1,5 +1,5 @@
 import { BaseComponent, Component } from "./components";
-import { TKML } from "./index";
+import { TKML, TKMLOptions } from "./index";
 import { Parser } from "./parser";
 
 // Runtime class to handle all TKML actions
@@ -10,30 +10,43 @@ export class Runtime {
     private cache: Map<string, string> = new Map();
     currentHost: string = '';
     private initialUrl: string | null = null;
+    private initialBody: string | null = null;
     private static highlightJsLoaded = false;
     private static loadingPromise: Promise<void> | null = null;
     private observers: Map<string, IntersectionObserver> = new Map();
     private footerState: Map<string, { lastScrollY: number, direction: 'up' | 'down' }> = new Map();
     private aborted: boolean = false;
+    private URLControl: boolean = false;
+    public options: TKMLOptions;
 
-    constructor(tkmlInstance: TKML) {
+    constructor(tkmlInstance: TKML, options: TKMLOptions = {}) {
         this.instanceId = ++Runtime.counter;
         this.tkmlInstance = tkmlInstance;
+        this.options = options;
 
         // Add history navigation handler
         window.addEventListener('popstate', (event) => {
-            const params = new URLSearchParams(window.location.search);
-            const loadUrl = params.get('l');
-            console.log('popstate!!', loadUrl);
-            console.log('history', this.initialUrl);
-
-            if (loadUrl) {
-                this.load(decodeURIComponent(loadUrl), false);
-            } else if (this.tkmlInstance.rootUrl) {
-                // Return to initial page if no 'l' parameter
-                this.load(this.tkmlInstance.rootUrl, false);
-            } else if (this.initialUrl) {
-                this.load(this.initialUrl, false);
+            if (this.options.URLControl) {
+                let path = window.location.pathname;
+                if (path.startsWith('/')) {
+                    path = (path.startsWith('/localhost') ? 'http:/' : 'https:/') + path;
+                    this.load(decodeURIComponent(path), false);
+                }
+            } else {
+                // Используем hash вместо параметра l
+                const hash = window.location.hash.slice(1); // Убираем #
+                console.log('hash', hash, 'initialUrl', this.initialUrl, 'rootUrl', this.tkmlInstance.rootUrl);
+                if (hash) {
+                    this.load(decodeURIComponent(hash), false);
+                } else if (this.tkmlInstance.rootUrl) {
+                    this.load(this.tkmlInstance.rootUrl, false);
+                } else if (this.initialBody) {
+                    this.fromText(this.initialBody);
+                } else if (this.initialUrl) {
+                    this.load(this.initialUrl, false);
+                } else {
+                    console.log('no hash, initialUrl, rootUrl');
+                }
             }
         });
     }
@@ -61,7 +74,7 @@ export class Runtime {
 
     public go(url: string, noCache: boolean = false, target?: string, rootElement?: Component): void {
         if (this.aborted) {
-            this.resetState(); // Reset for next use
+            this.resetState();
             return;
         }
         url = decodeURIComponent(url);
@@ -76,7 +89,15 @@ export class Runtime {
         this.load(url, true, params);
     }
 
+    private formatUrl(url: string): string {
+        url = url.replace(/^https?:\/\//, '//');
+        return url;
+    }
+
     public load(url: string, updateHistory: boolean = false, postData?: Record<string, string>, noCache?: boolean, target?: string, rootElement?: Component) {
+        if (url.startsWith('//')) {
+            url = (url.startsWith('//localhost') ? 'http:' : 'https:') + url;
+        }
         // Store initial URL on first load
         if (!this.initialUrl) {
             this.initialUrl = url;
@@ -92,13 +113,17 @@ export class Runtime {
         }
 
         if (updateHistory && !target && !rootElement) {
-            // Update browser history with encoded URL as parameter
-            const currentUrl = new URL(window.location.href);
-            const historyUrl = new URL(window.location.origin + window.location.pathname);
-            historyUrl.searchParams.set('l', encodeURIComponent(fullUrl));
-
-            if (currentUrl.searchParams.get('l') !== historyUrl.searchParams.get('l')) {
+            let historyUrl = (!this.currentHost || this.currentHost == window.location.origin) ? url : fullUrl;
+            if (historyUrl.match(/^https?:\/\//)) {
+                historyUrl = historyUrl.replace(/^https?:\/\//, '//');
+            }
+            if (this.options.URLControl) {
+                console.log('historyUrl', historyUrl);
                 window.history.pushState({ url: fullUrl }, '', historyUrl);
+            } else {
+                // Обновляем hash с форматированным URL без кодирования
+                const formattedUrl = this.formatUrl(url);
+                window.history.pushState({ url: fullUrl }, '', '#' + historyUrl);
             }
         }
 
@@ -146,6 +171,15 @@ export class Runtime {
         } else {
             xhr.send();
         }
+    }
+
+    public fromText(text: string) {
+        if (!this.initialUrl && !this.initialBody) {
+            this.initialBody = text;
+        }
+        const parser = new Parser(this.tkmlInstance.root, this);
+        parser.add(text);
+        parser.finish();
     }
 
     public loader(element: HTMLElement): Runtime {

@@ -1,14 +1,19 @@
 import { Parser } from './parser';
 import { Runtime } from './runtime';
 
+export interface TKMLOptions {
+    dark?: boolean;
+    URLControl?: boolean;
+}
+
 export class TKML {
     root: HTMLElement;
     rootUrl: string = '';
     runtime: Runtime;
 
-    constructor(container: HTMLElement, opts: { dark?: boolean } = {}) {
+    constructor(container: HTMLElement, opts: TKMLOptions = {}) {
         this.root = container;
-        this.runtime = new Runtime(this);
+        this.runtime = new Runtime(this, opts);
         (window as any).TKML_RUNTIMES.set(this.runtime.getId(), this.runtime);
 
         const prefersDarkScheme = window.matchMedia("(prefers-color-scheme: dark)");
@@ -30,9 +35,26 @@ export class TKML {
     }
 
     public fromText(text: string) {
-        const parser = new Parser(this.root, this.runtime);
-        parser.add(text);
-        parser.finish();
+        this.runtime.fromText(text)
+
+    }
+
+    public fromUrl(): boolean {
+        if (this.runtime.options.URLControl) {
+            let path = window.location.pathname;
+            if (path.startsWith('/') && path.length > 1) {
+                this.load(path);
+                return true;
+            }
+        } else {
+            // Используем hash без декодирования
+            const hash = window.location.hash.slice(1);
+            if (hash) {
+                this.load(hash);
+                return true;
+            }
+        }
+        return false;
     }
 }
 
