@@ -10,7 +10,6 @@ export class Runtime {
     private cache: Map<string, string> = new Map();
     currentHost: string = '';
     private initialUrl: string | null = null;
-    private initialBody: string | null = null;
     private static highlightJsLoaded = false;
     private static loadingPromise: Promise<void> | null = null;
     private observers: Map<string, IntersectionObserver> = new Map();
@@ -26,28 +25,38 @@ export class Runtime {
 
         // Add history navigation handler
         window.addEventListener('popstate', (event) => {
+            let path;
             if (this.options.URLControl) {
-                let path = window.location.pathname;
-                if (path.startsWith('/')) {
+                path = window.location.pathname;
+                /*if (path.startsWith('/')) {
                     path = (path.startsWith('/localhost') ? 'http:/' : 'https:/') + path;
                     this.load(decodeURIComponent(path), false);
-                }
+                }*/
             } else {
-                // Используем hash вместо параметра l
-                const hash = window.location.hash.slice(1); // Убираем #
-                console.log('hash', hash, 'initialUrl', this.initialUrl, 'rootUrl', this.tkmlInstance.rootUrl);
+                path = window.location.hash.slice(1);
+            }
+
+            const fullUrl = this.getFullUrl(path)
+            console.log('hasCache', fullUrl);
+            if (this.hasCache(fullUrl)) {
+                console.log('RESPORING HASH')
+                this.popCache(fullUrl);
+            } else {
+                this.load(path, false);
+            }
+
+
+            /*    console.log('hash', hash, 'initialUrl', this.initialUrl, 'rootUrl', this.tkmlInstance.rootUrl);
                 if (hash) {
                     this.load(decodeURIComponent(hash), false);
                 } else if (this.tkmlInstance.rootUrl) {
                     this.load(this.tkmlInstance.rootUrl, false);
-                } else if (this.initialBody) {
-                    this.fromText(this.initialBody);
                 } else if (this.initialUrl) {
                     this.load(this.initialUrl, false);
                 } else {
                     console.log('no hash, initialUrl, rootUrl');
                 }
-            }
+            */
         });
     }
 
@@ -94,23 +103,38 @@ export class Runtime {
         return url;
     }
 
-    public load(url: string, updateHistory: boolean = false, postData?: Record<string, string>, noCache?: boolean, target?: string, rootElement?: Component) {
-        if (url.startsWith('//')) {
-            url = (url.startsWith('//localhost') ? 'http:' : 'https:') + url;
+    private getFullUrl(url: string): string {
+        let fullUrl = url;
+        if (fullUrl.startsWith('//')) {
+            fullUrl = (url.startsWith('//localhost') ? 'http:' : 'https:') + fullUrl;
         }
+        if (!fullUrl.match(/^https?:\/\//)) {
+            const baseHost = this.currentHost || window.location.origin;
+            return baseHost + (fullUrl.startsWith('/') ? '' : '/') + fullUrl;
+        } else if (URL.canParse(fullUrl)) {
+            this.currentHost = new URL(fullUrl).origin;
+        }
+        return fullUrl;
+    }
+
+    private popCache(url: string, target?: string) {
+        console.log('cache', url);
+        const content = this.getCache(url)!;
+        const parser = new Parser(target ? document.getElementById(target)! : this.tkmlInstance.root, this, target);
+        parser.add(content);
+        parser.finish();
+    }
+
+    public load(url: string, updateHistory: boolean = false, postData?: Record<string, string>, noCache?: boolean, target?: string, rootElement?: Component) {
+        //if (url.startsWith('//')) {
+        //    url = (url.startsWith('//localhost') ? 'http:' : 'https:') + url;
+        //}
         // Store initial URL on first load
         if (!this.initialUrl) {
             this.initialUrl = url;
         }
 
-        // Handle relative URLs
-        let fullUrl = url;
-        if (!url.match(/^https?:\/\//)) {
-            const baseHost = this.currentHost || window.location.origin;
-            fullUrl = baseHost + (url.startsWith('/') ? '' : '/') + url;
-        } else if (URL.canParse(fullUrl)) {
-            this.currentHost = new URL(fullUrl).origin;
-        }
+        const fullUrl = this.getFullUrl(url)
 
         if (updateHistory && !target && !rootElement) {
             let historyUrl = (!this.currentHost || this.currentHost == window.location.origin) ? url : fullUrl;
@@ -129,11 +153,7 @@ export class Runtime {
 
         // Check cache first
         if (!postData && !noCache && this.hasCache(fullUrl)) {
-            console.log('cache', fullUrl);
-            const content = this.getCache(fullUrl)!;
-            const parser = new Parser(target ? document.getElementById(target)! : this.tkmlInstance.root, this, target);
-            parser.add(content);
-            parser.finish();
+            this.popCache(fullUrl, target);
             return;
         }
 
@@ -173,10 +193,19 @@ export class Runtime {
         }
     }
 
-    public fromText(text: string) {
-        if (!this.initialUrl && !this.initialBody) {
-            this.initialBody = text;
+    public getLocation(): string {
+        if (this.options.URLControl) {
+            return window.location.pathname;
+        } else {
+            return window.location.hash.slice(1);
         }
+    }
+
+
+    public fromText(text: string) {
+        let fullUrl = this.getFullUrl(this.getLocation());
+        this.setCache(fullUrl, text);
+        console.log('SET CACHE', fullUrl, text);
         const parser = new Parser(this.tkmlInstance.root, this);
         parser.add(text);
         parser.finish();

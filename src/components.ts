@@ -101,7 +101,6 @@ export abstract class BaseComponent implements Component {
             } else {
                 // Для негруппируемых элементов рендерим как обычно
                 if (child instanceof Text) {
-                    console.log('text')
                     let text = child.render();
                     if (text === '' || text.replace(/[\s ]/g, '') === '') {
                         continue;
@@ -112,8 +111,6 @@ export abstract class BaseComponent implements Component {
                     result.push(`<div class="${className}-item ${className}-group">${currentGroup.join('')}</div>`);
                     currentGroup = [];
                 }
-                console.log('text')
-                console.log('ELEM', child.tag)
                 result.push(`<div class="${className}-item ${className}-${child.tag}">${child.render()}</div>`);
             }
         }

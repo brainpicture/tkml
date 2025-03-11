@@ -1,4 +1,4 @@
-.PHONY: ssr
+.PHONY: push push-all
 
 all:
 	npm run pack
@@ -15,9 +15,6 @@ push:
 	# Copy project files
 	ssh root@prod 'mkdir -p /var/www/tkml'
 	rsync -avz dist/* root@prod:/var/www/tkml/
-	rsync -avz ssr/* root@prod:./tkml/
-
-ssr:
 	rsync -avz ssr/* root@prod:./tkml/
 
 push-all: push
