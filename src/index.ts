@@ -1,28 +1,41 @@
 import { Parser } from './parser';
 import { Runtime } from './runtime';
+import { isServer, isBrowser } from './util';
+// Импортируем все компоненты
+import './components/index';
 
 export interface TKMLOptions {
     dark?: boolean;
     URLControl?: boolean;
+    isServer?: boolean;
+    baseUrl?: string; // Базовый URL для серверного окружения
+    instanceId?: number;
 }
 
 export class TKML {
-    root: HTMLElement;
+    root: HTMLElement | null;
     rootUrl: string = '';
     runtime: Runtime;
 
-    constructor(container: HTMLElement, opts: TKMLOptions = {}) {
+    constructor(container: HTMLElement | null, opts: TKMLOptions = {}) {
         this.root = container;
         this.runtime = new Runtime(this, opts);
-        (window as any).TKML_RUNTIMES.set(this.runtime.getId(), this.runtime);
 
-        const prefersDarkScheme = window.matchMedia("(prefers-color-scheme: dark)");
-        if (opts.dark || (opts.dark === undefined && prefersDarkScheme.matches)) {
-            document.documentElement.classList.add('dark')
-        } else {
-            document.documentElement.classList.add('light')
+        // Регистрируем экземпляр Runtime только в браузерном окружении
+        if (isBrowser) {
+            (window as any).TKML_RUNTIMES.set(this.runtime.getId(), this.runtime);
+
+            const prefersDarkScheme = window.matchMedia("(prefers-color-scheme: dark)");
+            if (opts.dark || (opts.dark === undefined && prefersDarkScheme.matches)) {
+                document.documentElement.classList.add('dark')
+            } else {
+                document.documentElement.classList.add('light')
+            }
+
+            if (this.root) {
+                this.root.classList.add('tkml-cont')
+            }
         }
-        this.root.classList.add('tkml-cont')
     }
 
     public preload(url: string) {
@@ -40,23 +53,35 @@ export class TKML {
     }
 
     public fromUrl(): boolean {
-        if (this.runtime.options.URLControl) {
-            let path = window.location.pathname;
-            if (path.startsWith('/') && path.length > 1) {
-                this.load(path);
-                return true;
-            }
-        } else {
-            // Используем hash без декодирования
-            const hash = window.location.hash.slice(1);
-            if (hash) {
-                this.load(hash);
-                return true;
+        if (isBrowser) {
+            if (this.runtime.options.URLControl) {
+                let path = window.location.pathname;
+                if (path.startsWith('/') && path.length > 1) {
+                    this.load(path);
+                    return true;
+                }
+            } else {
+                // Используем hash без декодирования
+                const hash = window.location.hash.slice(1);
+                if (hash) {
+                    this.load(hash);
+                    return true;
+                }
             }
         }
         return false;
     }
+
+    // Статический метод для компиляции TKML в HTML
+    public compile(tkml: string): string {
+        return this.runtime.compile(tkml);
+    }
 }
 
-// Add this line to make it available globally
-(window as any).TKML = TKML; 
+// Делаем TKML доступным глобально только в браузере
+if (isBrowser) {
+    (window as any).TKML = TKML;
+}
+
+// Экспортируем для использования в Node.js или в процессе сборки
+export default TKML; 

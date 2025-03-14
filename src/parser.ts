@@ -6,14 +6,19 @@ export class Parser {
     body: string = ''
     parser: SAXParser
     currentElement: HTMLElement | null = null
-    root: HTMLElement
+    root: HTMLElement | null
     isFirstChunk: boolean = true
     addClosingRoot: boolean = false
     rootComponent: Component | null = null
     renderElement: Component | null = null
     private runtime: Runtime
     private targets?: string[]
-    constructor(container: HTMLElement, runtime: Runtime, target?: string, renderElement?: Component) {
+    private inCodeBlock: boolean = false
+    private codeContent: string = ''
+    private codeAttributes: Record<string, string> = {}
+    private codeParent: Component | null = null
+
+    constructor(container: HTMLElement | null, runtime: Runtime, target?: string, renderElement?: Component) {
         this.root = container;
         this.runtime = runtime;
         this.targets = target?.split(',').map(t => t.trim());
@@ -40,6 +45,25 @@ export class Parser {
                 }
             }
 
+            // Если открывается тег code, запоминаем его атрибуты и родителя
+            if (node.name === 'code') {
+                this.inCodeBlock = true;
+                this.codeContent = '';
+                this.codeAttributes = attributes;
+                this.codeParent = curComponent;
+                return;
+            }
+
+            // Если мы внутри тега code, добавляем открывающий тег в содержимое
+            if (this.inCodeBlock) {
+                let attrStr = '';
+                for (const [key, value] of Object.entries(node.attributes)) {
+                    attrStr += ` ${key}="${value}"`;
+                }
+                this.codeContent += `<${node.name}${attrStr}>`;
+                return;
+            }
+
             const component = ComponentFactory.create(node.name, attributes, runtime, curComponent);
             if (curComponent) {
                 component.parent = curComponent;
@@ -50,7 +74,33 @@ export class Parser {
             curComponent = component;
         };
 
-        this.parser.onclosetag = () => {
+        this.parser.onclosetag = (name: string) => {
+            // Если закрывается тег code, создаем компонент Code с накопленным содержимым
+            if (name === 'code' && this.inCodeBlock) {
+                this.inCodeBlock = false;
+                const codeComponent = ComponentFactory.create('code', this.codeAttributes, runtime, this.codeParent);
+
+                if (this.codeParent) {
+                    codeComponent.parent = this.codeParent;
+                    this.codeParent.addChild(codeComponent);
+                } else {
+                    this.rootComponent = codeComponent;
+                }
+
+                // Добавляем накопленное содержимое как текстовый компонент
+                const textComponent = new Text(this.codeContent);
+                textComponent.parent = codeComponent;
+                codeComponent.addChild(textComponent);
+
+                return;
+            }
+
+            // Если мы внутри тега code, добавляем закрывающий тег в содержимое
+            if (this.inCodeBlock) {
+                this.codeContent += `</${name}>`;
+                return;
+            }
+
             if (curComponent) {
                 if (this.targets && curComponent.id && this.targets.includes(curComponent.id)) {
                     let targetEl = document.getElementById(curComponent.id);
@@ -63,6 +113,12 @@ export class Parser {
         };
 
         this.parser.ontext = (text: string) => {
+            // Если мы внутри тега code, добавляем текст в содержимое
+            if (this.inCodeBlock) {
+                this.codeContent += text;
+                return;
+            }
+
             if (curComponent) {
                 const textComponent = new Text(text);
                 textComponent.parent = curComponent;
@@ -89,16 +145,16 @@ export class Parser {
         this.parser.write(text);
     }
 
-    finish() {
+    finish(): string {
         if (this.addClosingRoot) {
             this.add('</tkml>');
         }
         this.parser.close();
         if (!this.targets && this.rootComponent) {
+            let html;
             if (this.renderElement) {
                 //this.rootComponent
                 let parent = this.renderElement.parent
-                let html;
                 let el = document.getElementById(this.renderElement.id!);
                 if (parent) {
                     this.rootComponent.children.forEach(child => {
@@ -114,10 +170,14 @@ export class Parser {
                     el.outerHTML = html;
                 }
             } else {
-                let html = this.rootComponent.render();
-                this.root.innerHTML = html;
+                html = this.rootComponent.render();
+                if (this.root) {
+                    this.root.innerHTML = html;
+                }
             }
+            return html
         }
+        return ''
     }
 
     failed(error: Error) {

@@ -15,7 +15,6 @@ push:
 	# Copy project files
 	ssh root@prod 'mkdir -p /var/www/tkml'
 	rsync -avz dist/* root@prod:/var/www/tkml/
-	rsync -avz ssr/* root@prod:./tkml/
 
 push-all: push
 	# Copy nginx config directly to sites-enabled and reload nginx

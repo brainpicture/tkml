@@ -1,43 +1,23 @@
 const path = require('path');
-const TerserPlugin = require('terser-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const CssMinimizerPlugin = require('css-minimizer-webpack-plugin');
-const HtmlWebpackPlugin = require('html-webpack-plugin');
+const TerserPlugin = require('terser-webpack-plugin');
 const webpack = require('webpack');
 
 module.exports = {
-    entry: {
-        tkml: './src/index.ts',
-        styles: './src/styles.css'
-    },
+    entry: './src/index.ts',
     output: {
-        filename: '[name].min.js',
+        filename: 'tkml.min.js',
         path: path.resolve(__dirname, 'dist'),
         library: {
             name: 'TKML',
             type: 'umd',
-            export: 'TKML'
+            export: 'default',
         },
         globalObject: 'this'
     },
-    module: {
-        rules: [
-            {
-                test: /\.tsx?$/,
-                use: 'ts-loader',
-                exclude: /node_modules/
-            },
-            {
-                test: /\.css$/,
-                use: [
-                    MiniCssExtractPlugin.loader,
-                    'css-loader'
-                ]
-            }
-        ]
-    },
     resolve: {
-        extensions: ['.tsx', '.ts', '.js', '.css'],
+        extensions: ['.ts', '.js'],
         fallback: {
             "buffer": false,
             "stream": false,
@@ -45,37 +25,45 @@ module.exports = {
             "process": false
         }
     },
+    module: {
+        rules: [
+            {
+                test: /\.ts$/,
+                use: 'ts-loader',
+                exclude: /node_modules/,
+            },
+            {
+                test: /\.css$/,
+                use: [MiniCssExtractPlugin.loader, 'css-loader'],
+            },
+        ]
+    },
+    plugins: [
+        new MiniCssExtractPlugin({
+            filename: 'styles.min.css',
+        }),
+        new webpack.DefinePlugin({})
+    ],
     optimization: {
-        minimize: true,
         minimizer: [
             new TerserPlugin({
                 terserOptions: {
+                    compress: {
+                        drop_console: process.env.NODE_ENV === 'production',
+                    },
                     output: {
                         ascii_only: true
                     }
                 }
             }),
-            new CssMinimizerPlugin()
-        ]
+            new CssMinimizerPlugin(),
+        ],
     },
-    plugins: [
-        new MiniCssExtractPlugin({
-            filename: '[name].min.css'
-        }),
-        new HtmlWebpackPlugin({
-            template: './test.html',
-            inject: false
-        }),
-        new webpack.DefinePlugin({
-            'process.env.NODE_DEBUG': false
-        })
-    ],
     devServer: {
         static: {
             directory: path.join(__dirname, 'dist'),
         },
-        hot: true,
-        open: true,
-        watchFiles: ['src/**/*', 'test.html']
+        compress: true,
+        port: 9000,
     }
 }; 

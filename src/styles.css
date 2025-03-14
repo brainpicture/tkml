@@ -36,7 +36,6 @@ body {
 .tkml-cont {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
     min-height: 100vh;
-    display: flex;
     flex-direction: column;
 }
 
@@ -512,6 +511,13 @@ html.dark {
 .section-content {
     flex: 1;
     padding: 4px 0;
+    display: flex;
+    align-items: center;
+}
+
+.section-content .pill {
+    margin: 0 6px 0 0;
+    vertical-align: baseline;
 }
 
 .section-arrow {
@@ -815,31 +821,39 @@ html.dark {
     border-top-color: transparent;
 }
 
-
-
+/* Pill styles */
 .pill {
     display: inline-flex;
     align-items: center;
-    padding: 6px 12px;
-    background: #2E3847;
-    border-radius: 16px;
-    color: #fff;
-    font-size: 14px;
-    line-height: 20px;
+    padding: 4px 8px;
+    border-radius: 12px;
+    background: var(--overlay-light);
+    color: var(--text-primary);
+    font-size: 0.9em;
+    margin: 2px 4px 0px 0px;
+    vertical-align: middle;
+    line-height: 1.5;
+    margin-top: 2px;
+    margin-bottom: 2px;
+    box-sizing: border-box;
+    justify-content: center;
     white-space: nowrap;
-    margin-right: 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .pill-icon {
-    width: 22px;
-    height: 22px;
-    margin-left: 6px;
-    object-fit: contain;
+    width: 14px;
+    height: 14px;
+    margin-left: 4px;
+    border-radius: 50%;
 }
 
-.pill:last-child {
-    margin-right: 0;
+/* Для группировки пилей в info */
+.info-group .pill {
+    margin: 2px 2px 0px 0px;
 }
+
 
 /* Container для группировки pills */
 .pills-container {
@@ -865,11 +879,6 @@ html.dark {
     flex-wrap: wrap;
     gap: 8px;
     padding: 8px 16px;
-}
-
-.info-group .pill {
-    margin-right: 0;
-    /* Отключаем стандартный margin для pill внутри группы */
 }
 
 .info-group .pills-container {
@@ -944,12 +953,6 @@ html.dark {
 .bubble-out .bubble-content {
     border-top-right-radius: 4px;
     background: var(--accent-primary);
-}
-
-/* Контейнер для пузырей сообщений */
-.tkml-cont:has(.bubble) {
-    display: flex;
-    flex-direction: column;
 }
 
 .label {
@@ -1137,4 +1140,88 @@ html.dark {
 .input:not(:placeholder-shown),
 .textarea:not(:placeholder-shown) {
     box-shadow: none;
+}
+
+/* Pagination styles */
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 16px 0;
+    flex-wrap: wrap;
+}
+
+.pagination-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    height: 36px;
+    padding: 0 12px;
+    border-radius: 8px;
+    background: var(--background-secondary);
+    color: var(--text-primary);
+    font-size: 14px;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.pagination-item:hover {
+    background: var(--background-hover);
+}
+
+.pagination-item.active {
+    background: var(--accent-primary);
+    font-weight: 600;
+    cursor: default;
+}
+
+.pagination-prev svg,
+.pagination-next svg {
+    flex-shrink: 0;
+}
+
+.pagination-prev {
+    padding-left: 10px;
+}
+
+.pagination-next {
+    padding-right: 10px;
+}
+
+/* Bullet styles */
+.bullet-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin: 8px 0;
+}
+
+.bullet-marker {
+    flex-shrink: 0;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--accent-primary);
+    margin-top: 8px;
+}
+
+.bullet-content {
+    flex: 1;
+    color: var(--text-dark);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.bullet-content .pill {
+    margin-top: 0;
+    margin-bottom: 0;
+    vertical-align: baseline;
+}
+
+.dark .bullet-content {
+    color: var(--text-primary);
 }

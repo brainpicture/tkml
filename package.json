@@ -2,7 +2,8 @@
     "name": "your-library-name",
     "version": "1.0.0",
     "description": "Your library description",
-    "main": "dist/index.js",
+    "main": "dist/tkml.server.js",
+    "browser": "dist/tkml.min.js",
     "types": "dist/index.d.ts",
     "scripts": {
         "build": "tsc",

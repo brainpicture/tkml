@@ -1,6 +1,7 @@
 import { BaseComponent, Component } from "./components";
 import { TKML, TKMLOptions } from "./index";
 import { Parser } from "./parser";
+import { isServer, isBrowser, safeDOM, safeWindow } from './util';
 
 // Runtime class to handle all TKML actions
 export class Runtime {
@@ -17,47 +18,34 @@ export class Runtime {
     private aborted: boolean = false;
     private URLControl: boolean = false;
     public options: TKMLOptions;
+    public isServer: boolean;
+    public isBrowser: boolean;
 
     constructor(tkmlInstance: TKML, options: TKMLOptions = {}) {
-        this.instanceId = ++Runtime.counter;
+        this.instanceId = options.instanceId || ++Runtime.counter;
         this.tkmlInstance = tkmlInstance;
         this.options = options;
+        this.isServer = options.isServer || isServer;
+        this.isBrowser = isBrowser;
 
-        // Add history navigation handler
-        window.addEventListener('popstate', (event) => {
-            let path;
-            if (this.options.URLControl) {
-                path = window.location.pathname;
-                /*if (path.startsWith('/')) {
-                    path = (path.startsWith('/localhost') ? 'http:/' : 'https:/') + path;
-                    this.load(decodeURIComponent(path), false);
-                }*/
-            } else {
-                path = window.location.hash.slice(1);
-            }
-
-            const fullUrl = this.getFullUrl(path)
-            console.log('hasCache', fullUrl);
-            if (this.hasCache(fullUrl)) {
-                console.log('RESPORING HASH')
-                this.popCache(fullUrl);
-            } else {
-                this.load(path, false);
-            }
-
-
-            /*    console.log('hash', hash, 'initialUrl', this.initialUrl, 'rootUrl', this.tkmlInstance.rootUrl);
-                if (hash) {
-                    this.load(decodeURIComponent(hash), false);
-                } else if (this.tkmlInstance.rootUrl) {
-                    this.load(this.tkmlInstance.rootUrl, false);
-                } else if (this.initialUrl) {
-                    this.load(this.initialUrl, false);
+        // Добавляем обработчик навигации по истории только в браузере
+        if (this.isBrowser) {
+            safeDOM.addEventListener(window, 'popstate', (event) => {
+                let path;
+                if (this.options.URLControl) {
+                    path = safeWindow.location.pathname;
                 } else {
-                    console.log('no hash, initialUrl, rootUrl');
+                    path = safeWindow.location.hash.slice(1);
                 }
-            */
-        });
+
+                const fullUrl = this.getFullUrl(path)
+                if (this.hasCache(fullUrl)) {
+                    this.popCache(fullUrl);
+                } else {
+                    this.load(path, false);
+                }
+            });
+        }
     }
 
     private hasCache(url: string): boolean {
@@ -104,37 +92,75 @@ export class Runtime {
     }
 
     private getFullUrl(url: string): string {
-        let fullUrl = url;
-        if (fullUrl.startsWith('//')) {
-            fullUrl = (url.startsWith('//localhost') ? 'http:' : 'https:') + fullUrl;
+
+
+        // Если URL абсолютный - обрабатываем как раньше
+        if (url.startsWith('//') || url.match(/^https?:\/\//)) {
+            let fullUrl = url;
+            if (fullUrl.startsWith('//')) {
+                fullUrl = (url.startsWith('//localhost') ? 'http:' : 'https:') + fullUrl;
+            }
+            if (URL.canParse(fullUrl)) {
+                this.currentHost = new URL(fullUrl).origin;
+            }
+            return fullUrl;
         }
-        if (!fullUrl.match(/^https?:\/\//)) {
-            const baseHost = this.currentHost || window.location.origin;
-            return baseHost + (fullUrl.startsWith('/') ? '' : '/') + fullUrl;
-        } else if (URL.canParse(fullUrl)) {
-            this.currentHost = new URL(fullUrl).origin;
+
+        const baseHost = this.currentHost || (this.isBrowser ? window.location.origin : '');
+        console.log('baseHost', baseHost);
+        console.log('url', url);
+
+        // Если путь начинается с /, считаем его абсолютным от корня
+        if (url.startsWith('/')) {
+            return baseHost + url;
         }
-        return fullUrl;
+
+        // Для относительных путей используем текущую директорию
+        let currentPath = this.getLocation();
+        console.log('currentPath', currentPath);
+
+        // Проверяем, не является ли currentPath абсолютным URL
+        if (currentPath) {
+            // Check if currentPath ends with .tkml, ignoring any query parameters
+            currentPath = currentPath.split('?')[0];
+            const lastSlashIndex = currentPath.lastIndexOf('/');
+            if (lastSlashIndex !== -1) {
+                const basePath = currentPath.substring(0, lastSlashIndex + 1);
+                console.log('basePath', basePath);
+                if (currentPath.match(/^(https?:)?\/\//)) {
+                    if (currentPath.startsWith(baseHost)) {
+                        return basePath + url;
+                    }
+                    // if host is not the same we will return baseHost + url
+                } else {
+                    return baseHost + (basePath.startsWith('/') ? basePath : '/' + basePath) + url;
+                }
+            }
+        }
+
+        // Если нет текущего пути или currentPath - абсолютный URL
+        return baseHost + '/' + url;
     }
 
     private popCache(url: string, target?: string) {
-        console.log('cache', url);
         const content = this.getCache(url)!;
-        const parser = new Parser(target ? document.getElementById(target)! : this.tkmlInstance.root, this, target);
+        const parser = new Parser(target && this.isBrowser ? document.getElementById(target)! : this.tkmlInstance.root, this, target);
         parser.add(content);
         parser.finish();
     }
 
     public load(url: string, updateHistory: boolean = false, postData?: Record<string, string>, noCache?: boolean, target?: string, rootElement?: Component) {
-        //if (url.startsWith('//')) {
-        //    url = (url.startsWith('//localhost') ? 'http:' : 'https:') + url;
-        //}
+        // В серверном окружении просто возвращаем
+        if (this.isServer) return;
+
         // Store initial URL on first load
         if (!this.initialUrl) {
             this.initialUrl = url;
         }
 
+        console.log('load', url);
         const fullUrl = this.getFullUrl(url)
+        console.log('fullUrl', fullUrl);
 
         if (updateHistory && !target && !rootElement) {
             let historyUrl = (!this.currentHost || this.currentHost == window.location.origin) ? url : fullUrl;
@@ -194,21 +220,16 @@ export class Runtime {
     }
 
     public getLocation(): string {
-        if (this.options.URLControl) {
-            return window.location.pathname;
-        } else {
-            return window.location.hash.slice(1);
+        if (this.isBrowser) {
+            return window.location.href;
         }
+        return '';
     }
 
-
-    public fromText(text: string) {
-        let fullUrl = this.getFullUrl(this.getLocation());
-        this.setCache(fullUrl, text);
-        console.log('SET CACHE', fullUrl, text);
+    public fromText(text: string): string {
         const parser = new Parser(this.tkmlInstance.root, this);
         parser.add(text);
-        parser.finish();
+        return parser.finish() || '';
     }
 
     public loader(element: HTMLElement): Runtime {
@@ -223,7 +244,6 @@ export class Runtime {
 
     public preload(url: string) {
         url = decodeURIComponent(url);
-
 
         // Handle relative URLs
         let fullUrl = url;
@@ -249,6 +269,7 @@ export class Runtime {
     }
 
     public loadHighlightJs(): Promise<void> {
+        if (this.isServer) return Promise.resolve();
         if (Runtime.loadingPromise) return Runtime.loadingPromise;
 
         Runtime.loadingPromise = new Promise((resolve) => {
@@ -277,6 +298,7 @@ export class Runtime {
     }
 
     public observeLoader(component: Component, url: string) {
+        if (this.isServer) return;
         if (!component.id) return;
         const element = document.getElementById(component.id);
         if (!element) return;
@@ -307,6 +329,7 @@ export class Runtime {
     }
 
     public observeFooter(footerId: string): void {
+        if (this.isServer) return;
         const footer = document.getElementById(footerId);
         if (!footer) return;
 
@@ -355,6 +378,7 @@ export class Runtime {
     }
 
     public observeHeader(headerId: string): void {
+        if (this.isServer) return;
         const header = document.getElementById(headerId);
         if (!header) return;
 
@@ -381,7 +405,7 @@ export class Runtime {
     }
 
     public validateFields(fields: string): Runtime {
-        if (this.aborted) return this;
+        if (this.aborted || this.isServer) return this;
 
         const fieldList = fields.split(',').map(f => f.trim());
         let firstError: HTMLElement | null = null;
@@ -410,16 +434,23 @@ export class Runtime {
 
         return this;
     }
+    compile(tkml: string): string {
+        const parser = new Parser(null, this);
+        parser.add(tkml);
+        return parser.finish() || '';
+    }
 }
 
-// Global registry for runtime instances
-(window as any).TKML_RUNTIMES = new Map<number, Runtime>();
+// Глобальный реестр для экземпляров Runtime только в браузере
+if (isBrowser) {
+    (window as any).TKML_RUNTIMES = new Map<number, Runtime>();
 
-// Helper function for inline calls
-(window as any).tkmlr = function (instanceId: number): Runtime {
-    const runtime = (window as any).TKML_RUNTIMES.get(instanceId);
-    if (!runtime) {
-        throw new Error(`Runtime instance with id ${instanceId} not found`);
-    }
-    return runtime;
-};
+    // Helper function for inline calls
+    (window as any).tkmlr = function (instanceId: number): Runtime {
+        const runtime = (window as any).TKML_RUNTIMES.get(instanceId);
+        if (!runtime) {
+            throw new Error(`Runtime instance with id ${instanceId} not found`);
+        }
+        return runtime;
+    };
+}

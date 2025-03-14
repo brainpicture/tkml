@@ -349,148 +349,39 @@ Example usage:
 <button width="100%" href="messenger.tkml">Back to messages</button>
 ```
 
+### Navigation
+Creates a pagination block with navigation controls.
+```xml
+<navigation>
+    <prev href="/page/1">Previous</prev>
+    <page href="/page/1">1</page>
+    <page href="/page/2" active>2</page>
+    <page href="/page/3">3</page>
+    <next href="/page/3">Next</next>
+</navigation>
+```
+
+Components:
+- `<navigation>` - Container for pagination elements
+- `<prev>` - Previous page button with left arrow
+- `<next>` - Next page button with right arrow
+- `<page>` - Page number button
+
+Attributes:
+- `href` - URL to navigate to when clicked
+- `active` - Marks the current page (for `<page>` component)
+- `target` - Target window ('_blank' for new window)
+- `preload` - Set to "true" to preload the href URL
+
+Example for simple next/previous navigation:
+```xml
+<navigation>
+    <prev href="example1.tkml">Previous Example</prev>
+    <next href="example3.tkml">Next Example</next>
+</navigation>
+```
+
 ## Examples
 
 Complete page example:
-```xml
-<title center>Welcome</title>
-<desc center>Select an option below</desc>
-<list>
-    <section href="/option1" icon="/icons/1.png">First Option</section>
-    <section href="/option2" icon="/icons/2.png">Second Option</section>
-</list>
-<info>
-    <img src="/banner.jpg" height="200" />
-    <title>Important Info</title>
-    <desc>Additional details here</desc>
-    <button href="/more">Learn More</button>
-</info>
 ```
-
-### Automatic Dark Mode
-
-```javascript
-// Automatically detects system preference
-new TKML(container);
-
-// Force dark mode
-new TKML(container, { dark: true });
-```
-
-### Navigation with History
-
-All navigation is handled automatically through `href` attributes. The library manages browser history and provides smooth transitions between pages.
-
-## Development
-
-1. Install dependencies:
-```bash
-npm install
-```
-
-2. Start development server with hot reload:
-```bash
-npm run dev
-```
-
-3. Build for production:
-```bash
-npm run pack
-```
-
-## Browser Support
-
-TKML works in all modern browsers that support:
-- XMLHttpRequest
-- ES6+ JavaScript
-- CSS Custom Properties
-- Browser History API
-
-## License
-
-MIT
-
-## Nginx Configuration
-
-To automatically wrap `.tkml` files in the HTML template when accessed directly, add this to your Nginx configuration:
-
-```nginx
-# Define variable to check if client accepts TKML
-map $http_accept $is_tkml {
-    "application/tkml"    1;
-    default              0;
-}
-
-server {
-    # ... your other server configuration ...
-
-    # Handle .tkml files
-    location ~ \.tkml$ {
-        if ($is_tkml = 0) {
-            # If not requesting TKML directly, transform the response
-            sub_filter_types application/tkml;
-            sub_filter_once on;
-            add_header Content-Type text/html;
-            sub_filter_types *;
-            sub_filter '^' '<!DOCTYPE html>
-<html>
-<head>
-    <link rel="stylesheet" href="https://tkml.app/styles.min.css">
-    <script src="https://tkml.app/tkml.min.js"></script>
-</head>
-<body>
-    <div id="container">
-    <script>
-        const container = document.getElementById("container");
-        const tkml = new TKML(container, { dark: true });
-        tkml.fromText(`';
-            sub_filter '$' '`);
-    </script>
-    </div>
-</body>
-</html>';
-        }
-        
-        # If requesting TKML directly, serve as is
-        default_type application/tkml;
-    }
-}
-```
-
-This configuration:
-1. Uses only standard Nginx modules (sub_filter)
-2. Automatically wraps TKML content when accessed directly in browser
-3. Serves raw TKML when requested with proper headers
-4. No additional modules required
-
-The solution works by wrapping the response content in HTML template using `sub_filter` directives to add content before and after the TKML file content.
-
-### Standard HTML Tags
-TKML supports several standard HTML tags for text formatting:
-
-```xml
-<b>Bold text</b>
-<i>Italic text</i>
-<u>Underlined text</u>
-<s>Strikethrough text</s>
-```
-
-These tags work exactly like their HTML counterparts and can be used within any text content. For example:
-
-```xml
-<desc>
-    This is <b>bold</b> and this is <i>italic</i>.
-    You can also <u>underline</u> or <s>strike through</s> text.
-    These tags can be <b><i>combined</i></b> as needed.
-</desc>
-
-<section>
-    Regular text with <b>bold emphasis</b>
-</section>
-
-<title>
-    Title with <i>italic part</i>
-</title>
-```
-
-The tags maintain consistent styling with the rest of your TKML content while providing familiar HTML text formatting options.

@@ -21,8 +21,9 @@
         const params = new URLSearchParams(window.location.search);
         const loadUrl = window.location.hash.slice(1);
         console.log(loadUrl)
-
-        if (loadUrl) { // load current page
+        if (loadUrl == 'tkml') {
+            tkml.load("http://localhost:8348/index.tkml");
+        } else if (loadUrl) { // load current page
             tkml.rootUrl = 'http://localhost:8084/index.tkml'
             tkml.load(loadUrl);
         } else {
