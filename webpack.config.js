@@ -5,7 +5,6 @@ const TerserPlugin = require('terser-webpack-plugin');
 const webpack = require('webpack');
 
 module.exports = {
-    mode: 'production',
     entry: './src/index.ts',
     output: {
         filename: 'tkml.min.js',

@@ -8,7 +8,7 @@
     "scripts": {
         "build": "tsc",
         "prepare": "npm run build",
-        "pack": "webpack --mode production && tsc src/build.ts --outDir dist && node dist/build.js",
+        "pack": "webpack --mode production && webpack --config webpack.css.config.js && tsc src/build.ts --outDir dist && node dist/build.js",
         "dev": "webpack serve --mode development --open"
     },
     "keywords": [],

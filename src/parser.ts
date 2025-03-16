@@ -58,6 +58,9 @@ export class Parser {
             } else if (node.name === 'code') {
                 this.inCodeBlock++
             }
+            if (curComponent?.selfClosing) { // if child of self closing component
+                curComponent = curComponent.parent;
+            }
 
             const component = ComponentFactory.create(node.name, attributes, runtime, curComponent);
             if (curComponent) {

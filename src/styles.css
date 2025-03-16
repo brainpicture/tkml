@@ -374,6 +374,10 @@ html.dark {
     align-items: center;
 }
 
+.info-p p {
+    margin: 0px;
+}
+
 .img {
     max-width: 100%;
     border-radius: 8px;
