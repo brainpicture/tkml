@@ -107,8 +107,8 @@ export class Runtime {
             return fullUrl;
         }
 
-        const baseHost = this.currentHost || (this.isBrowser ? window.location.origin : '');
-
+        let baseHost = this.currentHost || (this.isBrowser ? window.location.origin : '');
+        console.log('baseHost', baseHost);
         // Если путь начинается с /, считаем его абсолютным от корня
         if (url.startsWith('/')) {
             return baseHost + url;
@@ -116,6 +116,7 @@ export class Runtime {
 
         // Для относительных путей используем текущую директорию
         let currentPath = this.getLocation();
+        console.log('currentPath', currentPath);
 
         // Проверяем, не является ли currentPath абсолютным URL
         if (currentPath) {
@@ -123,10 +124,13 @@ export class Runtime {
             currentPath = currentPath.split('?')[0];
             const lastSlashIndex = currentPath.lastIndexOf('/');
             if (lastSlashIndex !== -1) {
-                const basePath = currentPath.substring(0, lastSlashIndex + 1);
-                if (currentPath.match(/^(https?:)?\/\//)) {
-                    if (currentPath.startsWith(baseHost)) {
-                        return basePath + url;
+                let basePath = currentPath.substring(0, lastSlashIndex + 1);
+                console.log('step1 basePath', basePath);
+                if (currentPath.startsWith('//')) {
+                    let shortHost = baseHost.replace(/https?:\/\//g, '//');
+                    if (currentPath.startsWith(shortHost)) {
+                        let prefix = basePath.startsWith('//localhost') ? 'http:' : 'https'
+                        return prefix + basePath + url;
                     }
                     // if host is not the same we will return baseHost + url
                 } else {
@@ -155,7 +159,9 @@ export class Runtime {
             this.initialUrl = url;
         }
 
+        console.log('load', url);
         const fullUrl = this.getFullUrl(url)
+        console.log('fullUrl', fullUrl);
 
         if (updateHistory && !target && !rootElement) {
             let historyUrl = (!this.currentHost || this.currentHost == window.location.origin) ? url : fullUrl;
@@ -215,7 +221,11 @@ export class Runtime {
 
     public getLocation(): string {
         if (this.isBrowser) {
-            return window.location.href;
+            if (this.options.URLControl) {
+                return window.location.pathname;
+            } else {
+                return window.location.hash.slice(1);
+            }
         }
         return '';
     }

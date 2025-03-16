@@ -3,11 +3,19 @@ const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const CssMinimizerPlugin = require('css-minimizer-webpack-plugin');
 const TerserPlugin = require('terser-webpack-plugin');
 const webpack = require('webpack');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
+
+// Определяем, находимся ли мы в режиме разработки
+const isDevelopment = process.env.NODE_ENV !== 'production';
 
 module.exports = {
-    entry: './src/index.ts',
+    mode: isDevelopment ? 'development' : 'production',
+    entry: {
+        tkml: './src/index.ts',
+        styles: './src/styles.css'
+    },
     output: {
-        filename: 'tkml.min.js',
+        filename: '[name].min.js',
         path: path.resolve(__dirname, 'dist'),
         library: {
             name: 'TKML',
@@ -39,7 +47,7 @@ module.exports = {
                     {
                         loader: 'css-loader',
                         options: {
-                            sourceMap: true,
+                            sourceMap: isDevelopment,
                         }
                     }
                 ],
@@ -50,7 +58,16 @@ module.exports = {
         new MiniCssExtractPlugin({
             filename: 'styles.min.css',
         }),
-        new webpack.DefinePlugin({})
+        new webpack.DefinePlugin({}),
+        // Используем HtmlWebpackPlugin только в режиме разработки
+        ...(isDevelopment ? [
+            new HtmlWebpackPlugin({
+                template: './test.html',
+                filename: 'index.html',
+                inject: false
+            }),
+            new webpack.HotModuleReplacementPlugin()
+        ] : [])
     ],
     optimization: {
         minimizer: [
@@ -64,11 +81,27 @@ module.exports = {
             new CssMinimizerPlugin(),
         ],
     },
-    devServer: {
-        static: {
-            directory: path.join(__dirname, 'dist'),
+    // Настройки dev-сервера только для режима разработки
+    ...(isDevelopment ? {
+        devServer: {
+            static: {
+                directory: path.join(__dirname, './'),
+                watch: true,
+            },
+            compress: true,
+            port: 9000,
+            hot: true,
+            liveReload: true,
+            open: ['test.html'],
+            watchFiles: ['src/**/*', 'test.html'],
+            client: {
+                overlay: true,
+                progress: true,
+            },
+            devMiddleware: {
+                writeToDisk: true,
+            }
         },
-        compress: true,
-        port: 9000,
-    }
+        devtool: 'source-map'
+    } : {})
 }; 

@@ -2,32 +2,43 @@
 <html>
 
 <head>
-    <title>TKML Test</title>
-    <link rel="stylesheet" href="./styles.min.css">
-    <script src="./tkml.min.js"></script>
+    <title>TKML Dev Test</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="dist/styles.min.css">
+    <script src="dist/tkml.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+        }
+
+        #container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+    </style>
 </head>
 
 <body>
     <div id="container"></div>
-
     <script>
-        // Get container element
-        const container = document.getElementById('container');
 
-        // Initialize TKML with container
+        const container = document.getElementById('container');
         const tkml = new TKML(container, { dark: true });
 
-        // Check for 'l' parameter and load that URL if present
-        const params = new URLSearchParams(window.location.search);
-        const loadUrl = window.location.hash.slice(1);
-        console.log(loadUrl)
-        if (loadUrl == 'tkml') {
-            tkml.load("http://localhost:8348/index.tkml");
-        } else if (loadUrl) { // load current page
-            tkml.rootUrl = 'http://localhost:8084/index.tkml'
-            tkml.load(loadUrl);
-        } else {
-            tkml.load("http://localhost:8084/index.tkml");
+        if (!tkml.fromUrl()) {
+            tkml.fromText(`
+                <title center>TKML Dev Test</title>
+                <br/>
+                <list>
+                    <section href="http://localhost:8348/">Test Component</section>
+                </list>
+                <br/>
+                <msg type="info">Changes should be reflected automatically when you modify the source code.</msg>
+            `);
         }
     </script>
 </body>
