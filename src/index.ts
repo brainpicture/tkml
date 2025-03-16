@@ -76,6 +76,12 @@ export class TKML {
     public compile(tkml: string): string {
         return this.runtime.compile(tkml);
     }
+
+    // is needed to serve runtime js for server side flow
+    public getRuntimeJS() {
+        return this.runtime.onload.join('\n');
+    }
+
 }
 
 // Делаем TKML доступным глобально только в браузере

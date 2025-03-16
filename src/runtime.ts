@@ -20,6 +20,7 @@ export class Runtime {
     public options: TKMLOptions;
     public isServer: boolean;
     public isBrowser: boolean;
+    public onload: string[] = [];
 
     constructor(tkmlInstance: TKML, options: TKMLOptions = {}) {
         this.instanceId = options.instanceId || ++Runtime.counter;
@@ -107,8 +108,6 @@ export class Runtime {
         }
 
         const baseHost = this.currentHost || (this.isBrowser ? window.location.origin : '');
-        console.log('baseHost', baseHost);
-        console.log('url', url);
 
         // Если путь начинается с /, считаем его абсолютным от корня
         if (url.startsWith('/')) {
@@ -117,7 +116,6 @@ export class Runtime {
 
         // Для относительных путей используем текущую директорию
         let currentPath = this.getLocation();
-        console.log('currentPath', currentPath);
 
         // Проверяем, не является ли currentPath абсолютным URL
         if (currentPath) {
@@ -126,7 +124,6 @@ export class Runtime {
             const lastSlashIndex = currentPath.lastIndexOf('/');
             if (lastSlashIndex !== -1) {
                 const basePath = currentPath.substring(0, lastSlashIndex + 1);
-                console.log('basePath', basePath);
                 if (currentPath.match(/^(https?:)?\/\//)) {
                     if (currentPath.startsWith(baseHost)) {
                         return basePath + url;
@@ -158,9 +155,7 @@ export class Runtime {
             this.initialUrl = url;
         }
 
-        console.log('load', url);
         const fullUrl = this.getFullUrl(url)
-        console.log('fullUrl', fullUrl);
 
         if (updateHistory && !target && !rootElement) {
             let historyUrl = (!this.currentHost || this.currentHost == window.location.origin) ? url : fullUrl;
@@ -168,7 +163,6 @@ export class Runtime {
                 historyUrl = historyUrl.replace(/^https?:\/\//, '//');
             }
             if (this.options.URLControl) {
-                console.log('historyUrl', historyUrl);
                 window.history.pushState({ url: fullUrl }, '', historyUrl);
             } else {
                 // Обновляем hash с форматированным URL без кодирования
@@ -434,6 +428,14 @@ export class Runtime {
 
         return this;
     }
+
+    // onload should be added only once per each component
+    public addOnload(component: Component, script: string) {
+        if (component.onloadAdded) return;
+        this.onload.push(script);
+        component.onloadAdded = true;
+    }
+
     compile(tkml: string): string {
         const parser = new Parser(null, this);
         parser.add(tkml);

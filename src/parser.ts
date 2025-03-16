@@ -1,5 +1,5 @@
 import { SAXParser, Tag } from 'sax';
-import { ComponentFactory, Component, Text, Root } from './components';
+import { ComponentFactory, Component, Text, Root, Code } from './components';
 import { Runtime } from './runtime';
 
 export class Parser {
@@ -13,10 +13,8 @@ export class Parser {
     renderElement: Component | null = null
     private runtime: Runtime
     private targets?: string[]
-    private inCodeBlock: boolean = false
+    private inCodeBlock: number = 0
     private codeContent: string = ''
-    private codeAttributes: Record<string, string> = {}
-    private codeParent: Component | null = null
 
     constructor(container: HTMLElement | null, runtime: Runtime, target?: string, renderElement?: Component) {
         this.root = container;
@@ -46,22 +44,19 @@ export class Parser {
             }
 
             // Если открывается тег code, запоминаем его атрибуты и родителя
-            if (node.name === 'code') {
-                this.inCodeBlock = true;
-                this.codeContent = '';
-                this.codeAttributes = attributes;
-                this.codeParent = curComponent;
-                return;
-            }
 
-            // Если мы внутри тега code, добавляем открывающий тег в содержимое
-            if (this.inCodeBlock) {
+            if (this.inCodeBlock > 0) {
                 let attrStr = '';
                 for (const [key, value] of Object.entries(node.attributes)) {
                     attrStr += ` ${key}="${value}"`;
                 }
                 this.codeContent += `<${node.name}${attrStr}>`;
+                if (node.name === 'code') {
+                    this.inCodeBlock++
+                }
                 return;
+            } else if (node.name === 'code') {
+                this.inCodeBlock++
             }
 
             const component = ComponentFactory.create(node.name, attributes, runtime, curComponent);
@@ -75,30 +70,23 @@ export class Parser {
         };
 
         this.parser.onclosetag = (name: string) => {
-            // Если закрывается тег code, создаем компонент Code с накопленным содержимым
-            if (name === 'code' && this.inCodeBlock) {
-                this.inCodeBlock = false;
-                const codeComponent = ComponentFactory.create('code', this.codeAttributes, runtime, this.codeParent);
 
-                if (this.codeParent) {
-                    codeComponent.parent = this.codeParent;
-                    this.codeParent.addChild(codeComponent);
+            if (this.inCodeBlock > 0) {
+                // Если закрывается тег code, создаем компонент Code с накопленным содержимым
+                if (name === 'code') {
+                    this.inCodeBlock--;
+                    if (this.inCodeBlock === 0) {
+                        (curComponent as Code).setContent(this.codeContent);
+                        this.codeContent = '';
+                    } else {
+                        this.codeContent += `</${name}>`; // just closing inner code block
+                        return;
+                    }
+                    // no return here
                 } else {
-                    this.rootComponent = codeComponent;
+                    this.codeContent += `</${name}>`;
+                    return;
                 }
-
-                // Добавляем накопленное содержимое как текстовый компонент
-                const textComponent = new Text(this.codeContent);
-                textComponent.parent = codeComponent;
-                codeComponent.addChild(textComponent);
-
-                return;
-            }
-
-            // Если мы внутри тега code, добавляем закрывающий тег в содержимое
-            if (this.inCodeBlock) {
-                this.codeContent += `</${name}>`;
-                return;
             }
 
             if (curComponent) {
@@ -114,7 +102,7 @@ export class Parser {
 
         this.parser.ontext = (text: string) => {
             // Если мы внутри тега code, добавляем текст в содержимое
-            if (this.inCodeBlock) {
+            if (this.inCodeBlock > 0) {
                 this.codeContent += text;
                 return;
             }

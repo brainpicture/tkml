@@ -5,6 +5,7 @@ const TerserPlugin = require('terser-webpack-plugin');
 const webpack = require('webpack');
 
 module.exports = {
+    mode: 'production',
     entry: './src/index.ts',
     output: {
         filename: 'tkml.min.js',
@@ -33,8 +34,16 @@ module.exports = {
                 exclude: /node_modules/,
             },
             {
-                test: /\.css$/,
-                use: [MiniCssExtractPlugin.loader, 'css-loader'],
+                test: /\.css$/i,
+                use: [
+                    MiniCssExtractPlugin.loader,
+                    {
+                        loader: 'css-loader',
+                        options: {
+                            sourceMap: true,
+                        }
+                    }
+                ],
             },
         ]
     },
@@ -48,9 +57,6 @@ module.exports = {
         minimizer: [
             new TerserPlugin({
                 terserOptions: {
-                    compress: {
-                        drop_console: process.env.NODE_ENV === 'production',
-                    },
                     output: {
                         ascii_only: true
                     }

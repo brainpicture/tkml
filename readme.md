@@ -217,11 +217,7 @@ Basic text formatting tags:
 Adds vertical spacing:
 ```xml
 <br/>           <!-- Default break (20px) -->
-<br size="10"/> <!-- Custom size break -->
-<br size="40"/> <!-- Larger break -->
 ```
-Attributes:
-- `size` - Custom break height in pixels (default: 20)
 
 All components that support navigation (`button`, `section`, `a`, etc) have these common attributes:
 - `href` - URL to navigate to
