@@ -2,6 +2,7 @@
     /* Основные цвета */
     --background-primary: #EFEEF3;
     --background-secondary: #1d2633;
+    --background-menu: #c0c9d7;
     --background-hover: #252f3d;
 
     /* Текст */
@@ -27,6 +28,7 @@
 /* Темная тема */
 html.dark {
     --background-primary: #10161F;
+    --background-menu: #0d131d;
 }
 
 body {
@@ -369,7 +371,6 @@ html.dark {
 }
 
 .info-section .section-content {
-    display: flex;
     align-items: center;
 }
 
@@ -498,7 +499,6 @@ html.dark {
 
 .section.clickable {
     cursor: pointer;
-    display: flex;
     align-items: center;
     justify-content: space-between;
     transition: background-color 0.2s;
@@ -516,7 +516,6 @@ html.dark {
 .section-content {
     flex: 1;
     padding: 4px 0;
-    display: flex;
     align-items: center;
 }
 
@@ -788,6 +787,88 @@ html.dark {
 .header-back.loading:after {
     display: none;
     /* Hide arrow when loading */
+}
+
+
+.header-menu {
+    cursor: pointer;
+    display: flex;
+
+    left: 16px;
+    margin-right: 14px;
+    position: absolute;
+    align-items: center;
+    justify-content: center;
+    padding: 3px 8px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.2s, transform 0.2s;
+}
+
+.header-menu:hover {
+    transform: scale(1.15);
+}
+
+.header-menu:active {
+    transform: scale(0.95);
+}
+
+.menu-panel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 280px;
+    width: 80%;
+    max-width: 540px;
+
+
+    height: 100%;
+    background-color: var(--background-menu);
+    z-index: 1000;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+    overflow-y: auto;
+}
+
+.menu-panel.open {
+    transform: translateX(0);
+}
+
+.menu-panel.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 30px;
+    height: 30px;
+    margin: -15px 0 0 -15px;
+    border: 3px solid transparent;
+    border-top-color: var(--text-primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+.menu-panel-content {
+    padding: 20px;
+}
+
+.menu-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease;
+}
+
+.menu-overlay.open {
+    opacity: 1;
+    visibility: visible;
 }
 
 @keyframes back-spinner {
@@ -1228,4 +1309,35 @@ html.dark {
 
 .dark .bullet-content {
     color: var(--text-primary);
+}
+
+/* Loading state for pagination items */
+.pagination-item.loading {
+    position: relative;
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.pagination-item.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 16px;
+    height: 16px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid transparent;
+    border-top-color: var(--text-primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
 }

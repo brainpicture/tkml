@@ -44,12 +44,23 @@ export class TKML {
 
     // open any TKML page
     public load(url: string, updateHistory: boolean = false, postData?: Record<string, string>) {
+        url = this.runtime.fixUrl(url)
         this.runtime.load(url, updateHistory, postData);
     }
 
-    public fromText(text: string) {
-        this.runtime.fromText(text)
+    public fromText(text: string): boolean {
+        const parser = new Parser(this.root, this.runtime);
+        parser.add(text);
+        parser.finish();
 
+        this.runtime.setCacheForCurrentUrl(text);
+
+        // Update the page after rendering text
+        if (this.runtime) {
+            setTimeout(() => this.runtime.onPageUpdate(), 0);
+        }
+
+        return true;
     }
 
     public fromUrl(): boolean {
@@ -57,19 +68,33 @@ export class TKML {
             if (this.runtime.options.URLControl) {
                 let path = window.location.pathname;
                 if (path.startsWith('/') && path.length > 1) {
-                    this.load(path);
+                    this.runtime.load(path, false);
+                    this.runtime.currentUrl = path;
                     return true;
                 }
             } else {
                 // Используем hash без декодирования
                 const hash = window.location.hash.slice(1);
                 if (hash) {
-                    this.load(hash);
+                    this.runtime.load(hash, false);
+                    this.runtime.currentUrl = hash;
                     return true;
                 }
             }
         }
         return false;
+    }
+
+    public addPage(path: string, content: string) {
+        let fullUrl = this.runtime.getFullUrl(path)
+        this.runtime.setCache(fullUrl, content);
+    }
+
+    // start TKML using routes from URL
+    public route() {
+        if (!this.fromUrl()) {
+            this.load('/')
+        }
     }
 
     // Статический метод для компиляции TKML в HTML

@@ -73,7 +73,6 @@ export class Parser {
         };
 
         this.parser.onclosetag = (name: string) => {
-
             if (this.inCodeBlock > 0) {
                 // Если закрывается тег code, создаем компонент Code с накопленным содержимым
                 if (name === 'code') {

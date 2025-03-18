@@ -9,7 +9,8 @@ export class Runtime {
     private static counter = 0;
     private tkmlInstance: TKML;
     private cache: Map<string, string> = new Map();
-    currentHost: string = '';
+    //currentHost: string = '';
+    public currentUrl: string = '';
     private initialUrl: string | null = null;
     private static highlightJsLoaded = false;
     private static loadingPromise: Promise<void> | null = null;
@@ -21,6 +22,7 @@ export class Runtime {
     public isServer: boolean;
     public isBrowser: boolean;
     public onload: string[] = [];
+
 
     constructor(tkmlInstance: TKML, options: TKMLOptions = {}) {
         this.instanceId = options.instanceId || ++Runtime.counter;
@@ -47,6 +49,11 @@ export class Runtime {
                 }
             });
         }
+
+        // Add resize event handler for page updates if not already added
+        if (this.isBrowser) {
+            window.addEventListener('resize', () => this.onPageUpdate());
+        }
     }
 
     private hasCache(url: string): boolean {
@@ -57,7 +64,7 @@ export class Runtime {
         return this.cache.get(url);
     }
 
-    private setCache(url: string, content: string) {
+    public setCache(url: string, content: string) {
         this.cache.set(url, content);
     }
 
@@ -70,6 +77,12 @@ export class Runtime {
         return this;
     }
 
+    public setCacheForCurrentUrl(content: string) {
+        let url = this.getLocation();
+        let fullUrl = this.getFullUrl(url);
+        this.setCache(fullUrl, content);
+    }
+
     public go(url: string, noCache: boolean = false, target?: string, rootElement?: Component): void {
         if (this.aborted) {
             this.resetState();
@@ -79,11 +92,13 @@ export class Runtime {
         if (target) {
             noCache = true;
         }
+        url = this.fixUrl(url)
         this.load(url, true, undefined, noCache, target, rootElement);
     }
 
     public post(url: string, params: Record<string, string>) {
         url = decodeURIComponent(url);
+        url = this.fixUrl(url)
         this.load(url, true, params);
     }
 
@@ -92,65 +107,85 @@ export class Runtime {
         return url;
     }
 
-    private getFullUrl(url: string): string {
+    private popCache(url: string, target?: string, rootElement?: Component | string) {
+        const content = this.getCache(url)!;
+        let parser: Parser;
 
-
-        // Если URL абсолютный - обрабатываем как раньше
-        if (url.startsWith('//') || url.match(/^https?:\/\//)) {
-            let fullUrl = url;
-            if (fullUrl.startsWith('//')) {
-                fullUrl = (url.startsWith('//localhost') ? 'http:' : 'https:') + fullUrl;
-            }
-            if (URL.canParse(fullUrl)) {
-                this.currentHost = new URL(fullUrl).origin;
-            }
-            return fullUrl;
+        if (rootElement && typeof rootElement === 'string') {
+            let rootDomEl = document.getElementById(rootElement);
+            parser = new Parser(rootDomEl, this, target);
+        } else { // for a load more feature – loads instead of component
+            parser = new Parser(target && this.isBrowser ? document.getElementById(target)! : this.tkmlInstance.root, this, target, rootElement ? rootElement as Component : undefined);
         }
 
-        let baseHost = this.currentHost || (this.isBrowser ? window.location.origin : '');
-        console.log('baseHost', baseHost);
-        // Если путь начинается с /, считаем его абсолютным от корня
+
+
+        parser.add(content);
+        parser.finish();
+        this.onPageUpdate();
+    }
+
+    // fix url will add subpath from current location or host and path if needed, but this url will
+    // be still relative, getFullUrl is needed to use to get full url
+    public fixUrl(url: string): string {
+        let currentHost = ''
+        if (url.match(/^https?:\/\//)) {
+            return url.replace(/^https?:\/\//, '//');
+        }
+
+        // Если URL абсолютный - обрабатываем как раньше
+        if (url.startsWith('//')) {
+            return url
+        }
+
+        let baseHost = ''//currentHost || (this.isBrowser ? window.location.origin : '');
+
+        // currentUrl us previously loaded url, wich we can step from
+        let currentPath = this.currentUrl;
+        if (currentPath.startsWith('//')) {
+            const hostMatch = currentPath.match(/^\/\/[^\/?]+/);
+            if (hostMatch) {
+                baseHost = hostMatch[0];
+            }
+        }
+
+
+        // If url starts from  / its probably from root no url adjustment needed
         if (url.startsWith('/')) {
             return baseHost + url;
         }
 
-        // Для относительных путей используем текущую директорию
-        let currentPath = this.getLocation();
-        console.log('currentPath', currentPath);
 
-        // Проверяем, не является ли currentPath абсолютным URL
         if (currentPath) {
             // Check if currentPath ends with .tkml, ignoring any query parameters
             currentPath = currentPath.split('?')[0];
             const lastSlashIndex = currentPath.lastIndexOf('/');
             if (lastSlashIndex !== -1) {
                 let basePath = currentPath.substring(0, lastSlashIndex + 1);
-                console.log('step1 basePath', basePath);
-                if (currentPath.startsWith('//')) {
-                    let shortHost = baseHost.replace(/https?:\/\//g, '//');
-                    if (currentPath.startsWith(shortHost)) {
-                        let prefix = basePath.startsWith('//localhost') ? 'http:' : 'https'
-                        return prefix + basePath + url;
-                    }
-                    // if host is not the same we will return baseHost + url
-                } else {
-                    return baseHost + (basePath.startsWith('/') ? basePath : '/' + basePath) + url;
-                }
+                return basePath + url;
             }
         }
 
-        // Если нет текущего пути или currentPath - абсолютный URL
-        return baseHost + '/' + url;
+        return '/' + url;
     }
 
-    private popCache(url: string, target?: string) {
-        const content = this.getCache(url)!;
-        const parser = new Parser(target && this.isBrowser ? document.getElementById(target)! : this.tkmlInstance.root, this, target);
-        parser.add(content);
-        parser.finish();
+    public getFullUrl(url: string): string {
+        // this url is already fixed
+        if (url.startsWith('//')) {
+            if (url.startsWith('//localhost')) {
+                return 'http:' + url;
+            }
+            return 'https:' + url;
+        }
+        if (!url.startsWith('/')) {
+            url = '/' + url
+        }
+        const baseHost = this.isBrowser ? window.location.origin : ''
+        return baseHost + url;
     }
 
-    public load(url: string, updateHistory: boolean = false, postData?: Record<string, string>, noCache?: boolean, target?: string, rootElement?: Component) {
+    // rootElement can be a component (which should be replaced with content) or a string (dom id of element which would be updated with the result)
+    public load(url: string, updateHistory: boolean = false, postData?: Record<string, string>, noCache?: boolean, target?: string, rootElement?: Component | string, callback?: () => void) {
         // В серверном окружении просто возвращаем
         if (this.isServer) return;
 
@@ -159,12 +194,12 @@ export class Runtime {
             this.initialUrl = url;
         }
 
-        console.log('load', url);
         const fullUrl = this.getFullUrl(url)
-        console.log('fullUrl', fullUrl);
+
 
         if (updateHistory && !target && !rootElement) {
-            let historyUrl = (!this.currentHost || this.currentHost == window.location.origin) ? url : fullUrl;
+            //let historyUrl = (!this.currentHost || this.currentHost == window.location.origin) ? url : fullUrl;
+            let historyUrl = url
             if (historyUrl.match(/^https?:\/\//)) {
                 historyUrl = historyUrl.replace(/^https?:\/\//, '//');
             }
@@ -175,11 +210,13 @@ export class Runtime {
                 const formattedUrl = this.formatUrl(url);
                 window.history.pushState({ url: fullUrl }, '', '#' + historyUrl);
             }
+            this.currentUrl = url // now update current url
         }
 
         // Check cache first
         if (!postData && !noCache && this.hasCache(fullUrl)) {
-            this.popCache(fullUrl, target);
+            this.popCache(fullUrl, target, rootElement);
+            callback && callback();
             return;
         }
 
@@ -191,7 +228,16 @@ export class Runtime {
             xhr.setRequestHeader('Content-Type', 'application/json');
         }
 
-        const parser = new Parser(this.tkmlInstance.root, this, target, rootElement);
+        // rootElement is needed for a loader component
+        // load more feature
+        let parser: Parser;
+        // for menu – allow to render content in a custom element
+        if (typeof rootElement === 'string') {
+            let rootDomEl = document.getElementById(rootElement);
+            parser = new Parser(rootDomEl, this, target);
+        } else { // for a load more feature – loads instead of component
+            parser = new Parser(this.tkmlInstance.root, this, target, rootElement);
+        }
 
         xhr.onprogress = () => {
             parser.add(xhr.responseText);
@@ -203,6 +249,12 @@ export class Runtime {
                 if (!postData) {
                     this.setCache(fullUrl, xhr.responseText);
                 }
+                if (callback) {
+                    callback();
+                }
+
+                // Call the page update method after loading
+                setTimeout(() => this.onPageUpdate(), 0);
             } else {
                 parser.failed(new Error(`Failed to load URL: ${fullUrl}`));
             }
@@ -252,7 +304,8 @@ export class Runtime {
         // Handle relative URLs
         let fullUrl = url;
         if (!url.match(/^https?:\/\//)) {
-            const baseHost = this.currentHost || window.location.origin;
+            //const baseHost = this.currentHost || window.location.origin;
+            const baseHost = window.location.origin;
             fullUrl = baseHost + (url.startsWith('/') ? '' : '/') + url;
         }
 
@@ -450,6 +503,90 @@ export class Runtime {
         const parser = new Parser(null, this);
         parser.add(tkml);
         return parser.finish() || '';
+    }
+
+    // Add a new universal method for page updates
+    public onPageUpdate(): void {
+        if (this.isServer) return;
+
+        // Update footer position based on scroll presence
+        this.updateFooterPosition();
+
+        // Here we can add other page updates
+        // for example: this.updateLazyImages();
+        // or: this.updateDynamicElements();
+    }
+
+    // Private method to update footer position
+    private updateFooterPosition(): void {
+        // Find all footers on the page
+        const footers = document.querySelectorAll('.footer');
+        if (!footers.length) return;
+
+        // Check if page has scroll
+        const hasScroll = document.documentElement.scrollHeight > window.innerHeight;
+
+        // Update style for all footers
+        footers.forEach(footer => {
+            if (hasScroll) {
+                // If page has scroll, use sticky positioning
+                (footer as HTMLElement).style.position = 'sticky';
+            } else {
+                // If page has no scroll, use fixed positioning
+                (footer as HTMLElement).style.position = 'fixed';
+            }
+        });
+    }
+
+    // Simplified menu toggle method
+    public toggleMenu(id: string, contentUrl?: string): void {
+        if (this.isServer) return;
+
+        const menuId = `menu-panel-${id}`;
+        const overlayId = `menu-overlay-${id}`;
+
+        const menu = document.getElementById(menuId);
+        const overlay = document.getElementById(overlayId);
+
+        if (!menu || !overlay) return;
+
+        if (menu.classList.contains('open')) {
+            menu.classList.remove('open');
+            overlay.classList.remove('open');
+            //document.body.style.overflow = '';
+        } else {
+            menu.classList.add('open');
+            overlay.classList.add('open');
+            //document.body.style.overflow = 'hidden';
+
+            // Load content if not already loaded and contentUrl is provided
+            if (contentUrl && !menu.dataset.loaded) {
+                menu.classList.add('loading');
+                //this.go(contentUrl, true, undefined, `${menuId}-content`);
+                contentUrl = decodeURIComponent(contentUrl);
+                contentUrl = this.fixUrl(contentUrl)
+                this.load(contentUrl, false, undefined, false, undefined, `${menuId}-content`, () => {
+                    menu.classList.remove('loading');
+                });
+                menu.dataset.loaded = 'true';
+            }
+        }
+    }
+
+    public closeMenu(id: string): void {
+        if (this.isServer) return;
+
+        const menuId = `menu-panel-${id}`;
+        const overlayId = `menu-overlay-${id}`;
+
+        const menu = document.getElementById(menuId);
+        const overlay = document.getElementById(overlayId);
+
+        if (!menu || !overlay) return;
+
+        menu.classList.remove('open');
+        overlay.classList.remove('open');
+        //document.body.style.overflow = '';
     }
 }
 
