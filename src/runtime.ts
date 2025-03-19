@@ -22,6 +22,7 @@ export class Runtime {
     public isServer: boolean;
     public isBrowser: boolean;
     public onload: string[] = [];
+    private beforeRender: (() => void)[] = [];
 
 
     constructor(tkmlInstance: TKML, options: TKMLOptions = {}) {
@@ -96,10 +97,12 @@ export class Runtime {
         this.load(url, true, undefined, noCache, target, rootElement);
     }
 
-    public post(url: string, params: Record<string, string>) {
-        url = decodeURIComponent(url);
-        url = this.fixUrl(url)
-        this.load(url, true, params);
+    public post(url: string | null, params: Record<string, string>, target?: string) {
+        if (url) {
+            url = decodeURIComponent(url);
+            url = this.fixUrl(url)
+        }
+        this.load(url, true, params, undefined, target);
     }
 
     private formatUrl(url: string): string {
@@ -121,6 +124,9 @@ export class Runtime {
 
 
         parser.add(content);
+
+        this.beforeRender.forEach(fn => fn());
+
         parser.finish();
         this.onPageUpdate();
     }
@@ -185,7 +191,7 @@ export class Runtime {
     }
 
     // rootElement can be a component (which should be replaced with content) or a string (dom id of element which would be updated with the result)
-    public load(url: string, updateHistory: boolean = false, postData?: Record<string, string>, noCache?: boolean, target?: string, rootElement?: Component | string, callback?: () => void) {
+    public load(url: string | null, updateHistory: boolean = false, postData?: Record<string, string>, noCache?: boolean, target?: string, rootElement?: Component | string, callback?: () => void) {
         // В серверном окружении просто возвращаем
         if (this.isServer) return;
 
@@ -194,10 +200,17 @@ export class Runtime {
             this.initialUrl = url;
         }
 
-        const fullUrl = this.getFullUrl(url)
+        let fullUrl;
+        if (url === null) {
+            url = this.currentUrl;
+            console.log('url is null so fill from current', url);
+            fullUrl = url
+        } else {
+            fullUrl = this.getFullUrl(url)
+        }
 
 
-        if (updateHistory && !target && !rootElement) {
+        if (updateHistory && !rootElement) {
             //let historyUrl = (!this.currentHost || this.currentHost == window.location.origin) ? url : fullUrl;
             let historyUrl = url
             if (historyUrl.match(/^https?:\/\//)) {
@@ -245,6 +258,7 @@ export class Runtime {
 
         xhr.onload = () => {
             if (xhr.status === 200) {
+                this.beforeRender.forEach(fn => fn());
                 parser.finish();
                 if (!postData) {
                     this.setCache(fullUrl, xhr.responseText);
@@ -291,6 +305,10 @@ export class Runtime {
     public loader(element: HTMLElement): Runtime {
         if (this.aborted) return this;
         element.classList.add('loading');
+        this.beforeRender.push(() => {
+            element.classList.remove('loading');
+        });
+
         return this;
     }
 
@@ -587,6 +605,38 @@ export class Runtime {
         menu.classList.remove('open');
         overlay.classList.remove('open');
         //document.body.style.overflow = '';
+    }
+
+    // Helper method to parse querystring to object
+    public parseQueryString(queryString: string): Record<string, string> {
+        const params: Record<string, string> = {};
+
+        if (!queryString || queryString.trim() === '') {
+            return params;
+        }
+
+        queryString.split('&').forEach(pair => {
+            if (pair.trim()) {
+                const parts = pair.split('=');
+                const key = decodeURIComponent(parts[0]);
+                const value = parts.length > 1 ? decodeURIComponent(parts[1]) : '';
+                params[key] = value;
+            }
+        });
+
+        return params;
+    }
+
+    // Method to handle post requests with querystring data
+    public loadPost(url: string | null, queryString: string, target?: string): Runtime {
+        if (this.aborted) {
+            this.resetState();
+            return this;
+        }
+
+        const params = this.parseQueryString(queryString);
+        this.post(url, params, target);
+        return this;
     }
 }
 
