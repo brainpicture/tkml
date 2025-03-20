@@ -114,6 +114,7 @@ export class Runtime {
         const content = this.getCache(url)!;
         let parser: Parser;
 
+        this.onload = []; // clear onload
         if (rootElement && typeof rootElement === 'string') {
             let rootDomEl = document.getElementById(rootElement);
             parser = new Parser(rootDomEl, this, target);
@@ -244,6 +245,7 @@ export class Runtime {
         // rootElement is needed for a loader component
         // load more feature
         let parser: Parser;
+        this.onload = []; // clear onload
         // for menu – allow to render content in a custom element
         if (typeof rootElement === 'string') {
             let rootDomEl = document.getElementById(rootElement);
@@ -297,6 +299,7 @@ export class Runtime {
     }
 
     public fromText(text: string): string {
+        this.onload = []; // clear onload
         const parser = new Parser(this.tkmlInstance.root, this);
         parser.add(text);
         return parser.finish() || '';
@@ -518,6 +521,7 @@ export class Runtime {
     }
 
     compile(tkml: string): string {
+        this.onload = []; // clear onload
         const parser = new Parser(null, this);
         parser.add(tkml);
         return parser.finish() || '';
