@@ -24,6 +24,12 @@ export class Img extends BaseComponent {
         if (this.attributes['height']) {
             style = ` style="--img-height: ${parseInt(this.attributes['height'])}px"`;
         }
+
+        // If parent is a section, mark it as having an image
+        if (this.parent && this.parent.tag === 'section') {
+            (this.parent as any).hasImage = true;
+        }
+
         return `<img class="img${circleClass}"${attrs}${style}/>`;
     }
 }

@@ -10,6 +10,7 @@ export interface TKMLOptions {
     isServer?: boolean;
     baseUrl?: string; // Базовый URL для серверного окружения
     instanceId?: number;
+    plugins?: string[]; // Array of plugin script URLs
 }
 
 export class TKML {
@@ -35,7 +36,56 @@ export class TKML {
             if (this.root) {
                 this.root.classList.add('tkml-cont')
             }
+
+            // Load plugins if specified
+            if (opts.plugins && opts.plugins.length > 0) {
+                this.loadPlugins(opts.plugins);
+            }
+
+            (window as any).TKMLInstance = this;
         }
+    }
+
+    // Method to load plugin scripts
+    private loadPlugins(pluginUrls: string[]): void {
+        // For browser environment
+        if (isBrowser) {
+            pluginUrls.forEach(url => {
+                const script = document.createElement('script');
+                script.src = url;
+                script.async = true;
+                script.onload = () => {
+                    console.log(`TKML plugin loaded: ${url}`);
+                };
+                script.onerror = (err) => {
+                    console.error(`Failed to load TKML plugin: ${url}`, err);
+                };
+                document.head.appendChild(script);
+            });
+        }
+        // For server-side rendering
+        else if (isServer) {
+            pluginUrls.forEach(url => {
+                // Add JavaScript code to load the plugin script
+                this.runtime.onload.push(`
+                    (function() {
+                        var script = document.createElement('script');
+                        script.src = "${url}";
+                        script.async = true;
+                        script.onload = function() {
+                            console.log("TKML plugin loaded: ${url}");
+                        };
+                        script.onerror = function(err) {
+                            console.error("Failed to load TKML plugin: ${url}", err);
+                        };
+                        document.head.appendChild(script);
+                    })();
+                `);
+            });
+        }
+
+        // For both environments, store plugin URLs in runtime for potential reuse
+        this.runtime.pluginUrls = pluginUrls;
     }
 
     public preload(url: string) {
@@ -107,11 +157,18 @@ export class TKML {
         return this.runtime.onload.join('\n');
     }
 
+    public registerComponent(componentClass: new (...args: any[]) => any): void {
+        // This is a simple wrapper around ComponentFactory.register
+        const { ComponentFactory } = require('./components');
+        ComponentFactory.register(componentClass);
+    }
+
 }
 
 // Делаем TKML доступным глобально только в браузере
 if (isBrowser) {
     (window as any).TKML = TKML;
+    (window as any).TKMLInstance = null; // Will store the current instance
 }
 
 // Экспортируем для использования в Node.js или в процессе сборки

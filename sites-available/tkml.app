@@ -15,7 +15,7 @@ server {
     }
 
     # Обработка статических файлов напрямую из Nginx
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|pdf)$ {
+    location ~* \.(js|css)$ {
         try_files $uri =404;
         expires max;
         add_header Cache-Control "public, max-age=31536000";

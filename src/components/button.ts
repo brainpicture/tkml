@@ -14,8 +14,16 @@ export class Button extends BaseComponent {
             style = ` style="width: ${width.match(/^\d+$/) ? width + 'px' : width}"`;
         }
 
+        // Handle external links
+        if (this.attributes['external'] !== undefined && this.attributes['href']) {
+            const url = this.attributes['href'];
+            const target = this.attributes['target'] ? ` target="${safeAttr(this.attributes['target'])}"` : '';
+
+            // Convert button to an anchor for external links
+            return `<a href="${safeAttr(url)}"${target} class="button${secondaryClass}"${attrs}${style}>${this.childs()}</a>`;
+        }
         // Handle post parameter
-        if (this.attributes['post']) {
+        else if (this.attributes['post']) {
             const postQueryString = safeAttr(this.attributes['post']);
             let url;
             if ('href' in this.attributes) {
@@ -43,7 +51,8 @@ export class Button extends BaseComponent {
 
             attrs += ` onclick="tkmlr(${this.runtime?.getId()})${validation}.loader(this).go('${url}'${target})"`;
 
-            if (this.attributes['preload'] === 'true') {
+            // Обновленная проверка preload (как флаг или со значением "true")
+            if (this.attributes['preload'] !== undefined && this.attributes['preload'] !== "false") {
                 setTimeout(() => this.runtime?.preload(this.attributes['href']), 0);
             }
         }

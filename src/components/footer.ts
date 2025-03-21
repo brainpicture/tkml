@@ -8,9 +8,9 @@ export class Footer extends BaseComponent {
         const autoHideClass = this.attributes['autohide'] !== undefined ? ' autohide' : '';
         const id = this.getId();
 
-        if (this.attributes['autohide'] !== undefined && this.runtime) {
+        if (this.runtime) {
             setTimeout(() => {
-                this.runtime?.observeFooter(id);
+                this.runtime?.observeFooter(id, this.attributes['autohide'] !== undefined);
             }, 0);
         }
 

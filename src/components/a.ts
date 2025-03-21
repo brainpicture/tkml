@@ -11,8 +11,15 @@ export class A extends BaseComponent {
     render(): string {
         let attrs = this.getAttributes();
 
+        // Handle external links
+        if (this.attributes['external'] !== undefined && this.attributes['href']) {
+            const url = this.attributes['href'];
+            const target = this.attributes['target'] ? ` target="${safeAttr(this.attributes['target'])}"` : '';
+
+            attrs += ` href="${safeAttr(url)}"${target}`;
+        }
         // Handle post parameter
-        if (this.attributes['post']) {
+        else if (this.attributes['post']) {
             const postQueryString = safeAttr(this.attributes['post']);
             const url = this.attributes['href'] ? encodeUrl(this.attributes['href']) : '';
             const target = this.attributes['target'] ? `, '${safeIds(this.attributes['target'])}'` : '';
@@ -31,7 +38,7 @@ export class A extends BaseComponent {
             attrs += ` onclick="event.preventDefault(); tkmlr(${this.runtime?.getId()}).loader(this).go('${url}'${target})"`;
             attrs += ` href="javascript:void(0);"`;
 
-            if (this.attributes['preload'] === 'true') {
+            if (this.attributes['preload'] !== undefined && this.attributes['preload'] !== "false") {
                 setTimeout(() => this.runtime?.preload(this.attributes['href']), 0);
             }
         }

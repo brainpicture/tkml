@@ -23,6 +23,7 @@ export class Runtime {
     public isBrowser: boolean;
     public onload: string[] = [];
     private beforeRender: (() => void)[] = [];
+    public pluginUrls: string[] = [];
 
 
     constructor(tkmlInstance: TKML, options: TKMLOptions = {}) {
@@ -54,7 +55,19 @@ export class Runtime {
         // Add resize event handler for page updates if not already added
         if (this.isBrowser) {
             window.addEventListener('resize', () => this.onPageUpdate());
+
+            // Add scroll event handler only for the scrolled-to-bottom class
+            window.addEventListener('scroll', () => {
+                this.updateFooterScrollState();
+            });
         }
+
+        // Add scroll event handler for footer updates
+        /*if (this.isBrowser) {
+            window.addEventListener('scroll', () => {
+                this.updateFooterPosition();
+            });
+        }*/
     }
 
     private hasCache(url: string): boolean {
@@ -320,15 +333,11 @@ export class Runtime {
     }
 
     public preload(url: string) {
+        if (this.isServer) return this;
         url = decodeURIComponent(url);
-
+        url = this.fixUrl(url)
         // Handle relative URLs
-        let fullUrl = url;
-        if (!url.match(/^https?:\/\//)) {
-            //const baseHost = this.currentHost || window.location.origin;
-            const baseHost = window.location.origin;
-            fullUrl = baseHost + (url.startsWith('/') ? '' : '/') + url;
-        }
+        let fullUrl = this.getFullUrl(url)
 
         if (this.hasCache(fullUrl)) return this;
 
@@ -406,7 +415,7 @@ export class Runtime {
         this.observers.clear();
     }
 
-    public observeFooter(footerId: string): void {
+    public observeFooter(footerId: string, autohide: boolean = false): void {
         if (this.isServer) return;
         const footer = document.getElementById(footerId);
         if (!footer) return;
@@ -444,15 +453,21 @@ export class Runtime {
         };
 
         window.addEventListener('scroll', () => {
-            if (!ticking) {
-                window.requestAnimationFrame(updateFooter);
-                ticking = true;
+            if (autohide) {
+                if (!ticking) {
+                    window.requestAnimationFrame(updateFooter);
+                    ticking = true;
+                }
             }
+            //this.updateFooterPosition();
+            this.updateFooterScrollState();
         });
 
-        // Инициализируем начальное состояние
-        updateFooter();
-        this.footerState.set(footerId, { lastScrollY, direction: 'down' });
+        if (autohide) {
+            // Инициализируем начальное состояние
+            updateFooter();
+            this.footerState.set(footerId, { lastScrollY, direction: 'down' });
+        }
     }
 
     public observeHeader(headerId: string): void {
@@ -521,7 +536,7 @@ export class Runtime {
     }
 
     compile(tkml: string): string {
-        this.onload = []; // clear onload
+        this.onload = [`tkmlr(${this.instanceId}).onPageUpdate();`]; // clear onload
         const parser = new Parser(null, this);
         parser.add(tkml);
         return parser.finish() || '';
@@ -534,28 +549,58 @@ export class Runtime {
         // Update footer position based on scroll presence
         this.updateFooterPosition();
 
+
         // Here we can add other page updates
         // for example: this.updateLazyImages();
         // or: this.updateDynamicElements();
     }
 
-    // Private method to update footer position
+    // Private method to update footer position (called on resize)
     private updateFooterPosition(): void {
         // Find all footers on the page
         const footers = document.querySelectorAll('.footer');
         if (!footers.length) return;
 
-        // Check if page has scroll
-        const hasScroll = document.documentElement.scrollHeight > window.innerHeight;
+        // Get viewport height
+        const viewportHeight = window.innerHeight;
 
-        // Update style for all footers
         footers.forEach(footer => {
-            if (hasScroll) {
-                // If page has scroll, use sticky positioning
-                (footer as HTMLElement).style.position = 'sticky';
+            // Get footer's current position
+            const footerElement = footer as HTMLElement;
+            const footerRect = footerElement.getBoundingClientRect();
+            const footerTop = window.scrollY + footerRect.top;
+            const footerHeight = footerRect.height;
+
+            // Calculate how much space is available above the footer
+            const availableSpace = footerTop;
+
+            // If available space is less than viewport height, add margin to push footer to bottom
+            if (availableSpace < viewportHeight - footerHeight) {
+                const marginNeeded = Math.max(0, viewportHeight - availableSpace - footerHeight);
+                footerElement.style.marginTop = `${marginNeeded}px`;
             } else {
-                // If page has no scroll, use fixed positioning
-                (footer as HTMLElement).style.position = 'fixed';
+                footerElement.style.marginTop = '0';
+            }
+        });
+
+        // Also update the scroll state
+        this.updateFooterScrollState();
+    }
+
+    // Private method to update footer scroll state (called on scroll)
+    private updateFooterScrollState(): void {
+        const footers = document.querySelectorAll('.footer');
+        if (!footers.length) return;
+
+        // Check if scrolled to bottom (with a small threshold)
+        const isScrolledToBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 10;
+
+        // Add or remove 'scrolled-to-bottom' class based on scroll position
+        footers.forEach(footer => {
+            if (isScrolledToBottom) {
+                footer.classList.add('scrolled-to-bottom');
+            } else {
+                footer.classList.remove('scrolled-to-bottom');
             }
         });
     }
@@ -641,6 +686,92 @@ export class Runtime {
         const params = this.parseQueryString(queryString);
         this.post(url, params, target);
         return this;
+    }
+
+    // Add this method to the Runtime class
+    public initializeDropdown(dropdownId: string): void {
+        if (this.isServer) return;
+
+        const dropdown = document.getElementById(dropdownId);
+        if (!dropdown) return;
+
+        const toggle = dropdown.querySelector('.dropdown-toggle');
+        const menu = dropdown.querySelector('.dropdown-menu');
+        const input = dropdown.querySelector('input[type="hidden"]') as HTMLInputElement;
+        const display = dropdown.querySelector('.dropdown-display');
+
+        // Toggle dropdown menu
+        toggle?.addEventListener('click', function (e) {
+            e.preventDefault();
+            dropdown.classList.toggle('open');
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function (e) {
+            if (!dropdown.contains(e.target as Node)) {
+                dropdown.classList.remove('open');
+            }
+        });
+
+        // Find initially selected option
+        const selectedOption = dropdown.querySelector('.option.selected');
+        if (selectedOption && display) {
+            // Update display with selected option text
+            display.textContent = selectedOption.textContent?.trim() || '';
+
+            // Make sure the hidden input has the correct value
+            if (input) {
+                const value = (selectedOption as HTMLElement).getAttribute('value') || '';
+                input.value = value;
+            }
+        }
+
+        // Handle option selection
+        const options = dropdown.querySelectorAll('.option');
+        options.forEach(option => {
+            option.addEventListener('click', (e) => {
+                e.preventDefault();
+
+                // Remove selected class from all options
+                options.forEach(opt => opt.classList.remove('selected'));
+
+                // Add selected class to clicked option
+                option.classList.add('selected');
+
+                // Get the option value and text
+                const value = (option as HTMLElement).getAttribute('value') || '';
+                const text = (option as HTMLElement).textContent?.trim() || '';
+
+                // Update the hidden input and display
+                if (input) input.value = value;
+                if (display) display.textContent = text;
+
+                // Close the dropdown
+                dropdown.classList.remove('open');
+
+                // Handle href if present
+                const href = (option as HTMLElement).getAttribute('href');
+                if (href) {
+                    this.loader(option as HTMLElement).go(href);
+                }
+
+                // Handle form submission if dropdown has href
+                const dropdownHref = dropdown.getAttribute('data-href');
+                if (dropdownHref && !href) {
+                    // Create a simple object with the dropdown name and value
+                    const data: Record<string, string> = {};
+                    const name = input.name;
+                    data[name] = value;
+
+                    // Submit the form data
+                    this.loader(dropdown).post(dropdownHref, data);
+                }
+
+                // Trigger change event
+                const event = new Event('change', { bubbles: true });
+                dropdown.dispatchEvent(event);
+            });
+        });
     }
 }
 

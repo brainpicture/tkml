@@ -351,7 +351,7 @@ export class Input extends BaseComponent {
         if (this.attributes['href']) {
             const url = encodeUrl(this.attributes['href']);
             const paramName = this.attributes['name'] || 'input';
-            attrs += ` onkeydown="if(event.key==='Enter'){tkmlr(${this.runtime?.getId()}).loader(this.parentElement).post('${url}', {${safeAttr(paramName)}: this.value}, 'application/json')}"`;
+            attrs += ` onkeydown="if(event.key==='Enter'){tkmlr(${this.runtime?.getId()}).loader(this.parentElement).post('${url}', {${safeAttr(paramName)}: this.value})}"`;
         }
 
         return `<div class="input-wrapper"><input class="input"${attrs}/><div class="input-spinner"></div></div>`;
@@ -436,7 +436,27 @@ export class Checkbox extends BaseComponent {
     render(): string {
         let attrs = this.getAttributes();
 
-        if (this.attributes['href']) {
+        // Handle external links
+        if (this.attributes['external'] !== undefined && this.attributes['href']) {
+            const url = this.attributes['href'];
+            const target = this.attributes['target'] ? ` target="${safeAttr(this.attributes['target'])}"` : '';
+
+            const isChecked = this.attributes['checked'] !== undefined;
+            const checkedClass = isChecked ? ' checked' : '';
+            const checkedAttr = isChecked ? ' checked="checked"' : '';
+
+            attrs += ` onclick="this.classList.toggle('checked'); this.style.opacity='0.5';"`;
+
+            return `
+                <a href="${safeAttr(url)}"${target} class="checkbox${checkedClass}"${checkedAttr}${attrs}>
+                    <div class="checkbox-label">${this.childs()}</div>
+                    <div class="checkbox-toggle">
+                        <div class="checkbox-slider"></div>
+                    </div>
+                </a>
+            `;
+        }
+        else if (this.attributes['href']) {
             const url = encodeUrl(this.attributes['href']);
             const target = this.attributes['target'] ? `, '${safeIds(this.attributes['target'])}'` : '';
             attrs += ` onclick="this.classList.toggle('checked'); this.style.opacity='0.5'; tkmlr(${this.runtime?.getId()}).loader(this).go('${url}', true${target})"`;
@@ -465,18 +485,36 @@ ComponentFactory.register(Checkbox);
 
 export class Section extends BaseComponent {
     tag = 'section';
+    canParent = ['list', 'info'];
+    hasImage: boolean = false;
 
     getWrappingElement(element: HTMLElement): HTMLElement {
         return element.parentNode as HTMLElement;
     }
 
     render(): string {
+        let childs = this.childs(); // should be called here to affect parent
+
         let attrs = this.getAttributes();
         let clickableClass = '';
         let icon = '';
         let deactivatedClass = this.attributes['deactivated'] !== undefined ? ' deactivated' : '';
+        let imageClass = this.hasImage ? ' with-image' : '';
 
-        if (this.attributes['href']) {
+        // Handle external links
+        if (this.attributes['external'] !== undefined && this.attributes['href']) {
+            const url = this.attributes['href'];
+            const target = this.attributes['target'] ? ` target="${safeAttr(this.attributes['target'])}"` : '';
+            clickableClass = ' clickable';
+
+            return `
+                <a href="${safeAttr(url)}"${target} class="section${clickableClass}${deactivatedClass}${imageClass}"${attrs}>
+                    <div class="section-content">${childs}</div>
+                    <div class="section-arrow"></div>
+                </a>
+            `;
+        }
+        else if (this.attributes['href']) {
             const url = encodeUrl(this.attributes['href']);
             const target = this.attributes['target'] ? `, '${safeIds(this.attributes['target'])}'` : '';
             attrs += ` onclick="tkmlr(${this.runtime?.getId()}).loader(this).go('${url}'${target})"`;
@@ -484,6 +522,8 @@ export class Section extends BaseComponent {
             if (this.attributes['preload'] === 'true') {
                 setTimeout(() => this.runtime?.preload(this.attributes['href']), 0);
             }
+        } else if (this.parent?.tag === 'dropdown') {
+            clickableClass = ' clickable';
         }
 
         if (this.attributes['icon']) {
@@ -494,8 +534,8 @@ export class Section extends BaseComponent {
         }
 
         return `
-            <div class="section${clickableClass}${deactivatedClass}"${attrs}>
-                <div class="section-content">${this.childs()}</div>
+            <div class="section${clickableClass}${deactivatedClass}${imageClass}"${attrs}>
+                <div class="section-content">${childs}</div>
                 ${icon}
             </div>
         `;
@@ -637,3 +677,4 @@ import './menu';
 import './button';
 import './a';
 import './radio';
+import './dropdown';
