@@ -1477,9 +1477,6 @@ html.dark {
     background-color: var(--background-hover);
 }
 
-.dropdown-option.selected {
-    background-color: var(--background-secondary);
-}
 
 /* Option Component Styles */
 .option {
@@ -1497,10 +1494,6 @@ html.dark {
 
 .option:hover {
     background-color: var(--background-hover);
-}
-
-.option.selected {
-    background-color: var(--background-secondary);
 }
 
 .option-content {
@@ -1613,6 +1606,30 @@ html.dark {
 .dropdown-selected-icon {
     width: 20px;
     height: 20px;
+    margin-right: 12px;
+    object-fit: cover;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+/* Option with right icon */
+.option-right-icon {
+    margin-left: 12px;
+    flex-shrink: 0;
+}
+
+.option-right-icon img {
+    width: 24px;
+    height: 24px;
+    object-fit: cover;
+    border-radius: 4px;
+}
+
+/* Dropdown selected right icon */
+.dropdown-selected-right-icon {
+    width: 24px;
+    height: 24px;
+    margin-left: 12px;
     margin-right: 12px;
     object-fit: cover;
     border-radius: 4px;

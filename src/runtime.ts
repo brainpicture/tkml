@@ -759,19 +759,32 @@ export class Runtime {
                 // Handle image or icon in the selected option
                 const existingImg = toggle?.querySelector('.dropdown-selected-img');
                 const existingIcon = toggle?.querySelector('.dropdown-selected-icon');
+                const existingRightIcon = toggle?.querySelector('.dropdown-selected-right-icon');
 
                 if (existingImg) existingImg.remove();
                 if (existingIcon) existingIcon.remove();
+                if (existingRightIcon) existingRightIcon.remove();
 
                 // Check if option has an image
                 const optionImg = option.querySelector('.option-img');
+                const optionRightIcon = option.querySelector('.option-right-icon');
+
+                // Handle image if present
                 if (optionImg && toggle) {
                     const imgClone = optionImg.cloneNode(true) as HTMLElement;
                     imgClone.classList.remove('option-img');
                     imgClone.classList.add('dropdown-selected-img');
                     toggle.insertBefore(imgClone, toggle.firstChild);
+
+                    // If there's also a right icon, add it after the display
+                    if (optionRightIcon && toggle) {
+                        const rightIconClone = optionRightIcon.cloneNode(true) as HTMLElement;
+                        rightIconClone.classList.remove('option-right-icon');
+                        rightIconClone.classList.add('dropdown-selected-right-icon');
+                        display?.after(rightIconClone);
+                    }
                 }
-                // Check if option has an icon
+                // Check if option has only an icon (no image)
                 else {
                     const optionIcon = option.querySelector('.option-icon');
                     if (optionIcon && toggle) {
