@@ -3,6 +3,7 @@ import { encodeUrl, safeIds, safeAttr } from '../util';
 
 export class Button extends BaseComponent {
     tag = 'button';
+    hasText = true;
 
     render(): string {
         let attrs = this.getAttributes();

@@ -19,6 +19,7 @@ export interface Component {
     getWrappingElement(element: HTMLElement): HTMLElement;
     onloadAdded?: boolean;
     selfClosing?: boolean;
+    hasText?: boolean; // true if component can have text content
     addRootPrefix(html: string): void;
 }
 
@@ -31,6 +32,7 @@ export abstract class BaseComponent implements Component {
     public runtime?: Runtime;
     protected attributes: Record<string, string>;
     public id?: string;
+    public hasText?: boolean;
     canParent: string[] | null = null;
     constructor(attributes?: Record<string, string>) {
         this.attributes = attributes || {};
@@ -109,7 +111,6 @@ export abstract class BaseComponent implements Component {
 
 
             if (groupable && child.tag === 'pill') {
-                console.log('Group PUSH', child.tag)
                 currentGroup.push(child.render());
 
             } else {
@@ -158,6 +159,7 @@ export class ComponentFactory {
             }
             // Проверяем ограничения родительского компонента
             if (component.canParent && parent && !component.canParent.includes(parent.tag)) {
+                console.trace(`Component <${tag}> cannot be a child of <${parent.tag}>`);
                 component = new Error(`Component <${tag}> cannot be a child of <${parent.tag}>`);
             }
         } else {
@@ -178,6 +180,7 @@ export class ComponentFactory {
 // Root is a holder for any other components, its <tkml> tag wich can be omited in the document
 export class Root extends BaseComponent {
     tag = 'tkml';
+    hasText = true;
     rootPrefix: string = '';
 
     constructor() {
@@ -186,7 +189,6 @@ export class Root extends BaseComponent {
 
 
     render(): string {
-        console.log('Root render', this.rootPrefix)
         let childs = this.childs(); // now rootPrefix would be populated
         return `${this.rootPrefix}
         ${childs}`;
@@ -198,6 +200,8 @@ ComponentFactory.register(Root);
 export class Proxy extends BaseComponent {
     tag = 'undefined';
     attributes: Record<string, string>;
+    hasText = true;
+
 
     constructor(name: string, attributes?: Record<string, string>) {
         super(attributes);
@@ -244,6 +248,7 @@ export class Error extends BaseComponent {
 export class Title extends BaseComponent {
     tag = 'title';
     canParent = ['tkml', 'section', 'bubble', 'info'];
+    hasText = true;
 
     constructor(attributes?: Record<string, string>) {
         super(attributes);
@@ -261,6 +266,7 @@ ComponentFactory.register(Title);
 // Alert allows you to render alert messages styled variously
 export class Alert extends BaseComponent {
     tag = 'alert';
+    hasText = true;
 
     constructor(attributes?: Record<string, string>) {
         super(attributes);
@@ -274,7 +280,7 @@ export class Alert extends BaseComponent {
 }
 ComponentFactory.register(Alert);
 
-// Title stands for <title> tag, has no attributes yet
+// Inner tag for text fields
 export class Text extends BaseComponent {
     tag = 'text';
     text: string;
@@ -291,6 +297,7 @@ export class Text extends BaseComponent {
 
 export class Desc extends BaseComponent {
     tag = 'desc';
+    hasText = true;
 
     constructor(attributes: Record<string, string>) {
         super(attributes);
@@ -485,46 +492,79 @@ ComponentFactory.register(Checkbox);
 
 export class Section extends BaseComponent {
     tag = 'section';
-    canParent = ['list', 'info'];
+    canParent = ['list', 'info', 'tkml'];
     hasImage: boolean = false;
+    hasText = true;
 
     getWrappingElement(element: HTMLElement): HTMLElement {
         return element.parentNode as HTMLElement;
+    }
+
+    // Helper method to get common classes
+    protected getCommonClasses(): {
+        clickableClass: string,
+        disabledClass: string,
+        imageClass: string
+    } {
+        const isDisabled = this.attributes['disabled'] !== undefined;
+        const clickableClass = isDisabled ? '' : ' clickable';
+        const disabledClass = isDisabled ? ' disabled' : '';
+        const imageClass = this.hasImage ? ' with-image' : '';
+
+        return { clickableClass, disabledClass, imageClass };
+    }
+
+    // Helper method to add href attributes
+    protected addHrefAttributes(attrs: string): string {
+        const isDisabled = this.attributes['disabled'] !== undefined;
+
+        // Don't add href functionality if disabled
+        if (isDisabled) return attrs;
+
+        if (this.attributes['external'] !== undefined && this.attributes['href']) {
+            // External link handling is done in render method
+            return attrs;
+        }
+        else if (this.attributes['href']) {
+            const url = encodeUrl(this.attributes['href']);
+            const target = this.attributes['target'] ? `, '${safeIds(this.attributes['target'])}'` : '';
+            attrs += ` onclick="tkmlr(${this.runtime?.getId()}).loader(this).go('${url}'${target})"`;
+
+            if (this.attributes['preload'] === 'true') {
+                setTimeout(() => this.runtime?.preload(this.attributes['href']), 0);
+            }
+        }
+        else if (this.parent?.tag === 'dropdown') {
+            // No additional attributes needed for dropdown children
+        }
+
+        return attrs;
     }
 
     render(): string {
         let childs = this.childs(); // should be called here to affect parent
 
         let attrs = this.getAttributes();
-        let clickableClass = '';
         let icon = '';
-        let deactivatedClass = this.attributes['deactivated'] !== undefined ? ' deactivated' : '';
-        let imageClass = this.hasImage ? ' with-image' : '';
+
+        // Get common classes
+        const { clickableClass, disabledClass, imageClass } = this.getCommonClasses();
 
         // Handle external links
         if (this.attributes['external'] !== undefined && this.attributes['href']) {
             const url = this.attributes['href'];
             const target = this.attributes['target'] ? ` target="${safeAttr(this.attributes['target'])}"` : '';
-            clickableClass = ' clickable';
 
             return `
-                <a href="${safeAttr(url)}"${target} class="section${clickableClass}${deactivatedClass}${imageClass}"${attrs}>
+                <a href="${safeAttr(url)}"${target} class="section${clickableClass}${disabledClass}${imageClass}"${attrs}>
                     <div class="section-content">${childs}</div>
                     <div class="section-arrow"></div>
                 </a>
             `;
         }
-        else if (this.attributes['href']) {
-            const url = encodeUrl(this.attributes['href']);
-            const target = this.attributes['target'] ? `, '${safeIds(this.attributes['target'])}'` : '';
-            attrs += ` onclick="tkmlr(${this.runtime?.getId()}).loader(this).go('${url}'${target})"`;
-            clickableClass = ' clickable';
-            if (this.attributes['preload'] === 'true') {
-                setTimeout(() => this.runtime?.preload(this.attributes['href']), 0);
-            }
-        } else if (this.parent?.tag === 'dropdown') {
-            clickableClass = ' clickable';
-        }
+
+        // Add href attributes
+        attrs = this.addHrefAttributes(attrs);
 
         if (this.attributes['icon']) {
             const iconUrl = resolveUrl(this.attributes['icon'], this.runtime);
@@ -534,7 +574,7 @@ export class Section extends BaseComponent {
         }
 
         return `
-            <div class="section${clickableClass}${deactivatedClass}${imageClass}"${attrs}>
+            <div class="section${clickableClass}${disabledClass}${imageClass}"${attrs}>
                 <div class="section-content">${childs}</div>
                 ${icon}
             </div>
@@ -545,6 +585,7 @@ ComponentFactory.register(Section);
 
 export class Loader extends BaseComponent {
     tag = 'loader';
+    hasText = true;
 
     render(): string {
         const id = this.getId();
@@ -569,6 +610,7 @@ ComponentFactory.register(Loader);
 
 export class Bubble extends BaseComponent {
     tag = 'bubble';
+    hasText = true;
 
     render(): string {
         const type = this.attributes['type'] || 'in';
@@ -614,6 +656,7 @@ ComponentFactory.register(Bubble);
 
 export class Label extends BaseComponent {
     tag = 'label';
+    hasText = true;
 
     render(): string {
         let attrs = this.getAttributes();
@@ -624,6 +667,7 @@ ComponentFactory.register(Label);
 
 export class Textarea extends BaseComponent {
     tag = 'textarea';
+    hasText = true;
 
     render(): string {
         let attrs = this.getAttributes();
@@ -653,6 +697,7 @@ ComponentFactory.register(Textarea);
 
 export class Msg extends BaseComponent {
     tag = 'msg';
+    hasText = true;
 
     render(): string {
         let attrs = this.getAttributes();

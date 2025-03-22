@@ -11,6 +11,7 @@ ComponentFactory.registerProxyComponent('s');
 export class W extends BaseComponent {
     tag = 'w';
     canParent = ['desc', 'title', 'section', 'tkml']; // W может быть только внутри текстовых компонентов
+    hasText = true;
 
     render(): string {
         return `<span class="w">${this.childs()}</span>`;
@@ -32,6 +33,7 @@ ComponentFactory.register(Br);
 // Компонент для создания абзаца
 export class P extends BaseComponent {
     tag = 'p';
+    hasText = true;
     canParent = ['info', 'desc', 'section', 'tkml']; // Разрешаем использовать внутри информационных блоков
 
     render(): string {
@@ -44,7 +46,7 @@ ComponentFactory.register(P);
 // Компонент для создания маленького текста
 export class Small extends BaseComponent {
     tag = 'small';
-
+    hasText = true;
     render(): string {
         return `<small>${this.childs()}</small>`;
     }
@@ -54,7 +56,7 @@ ComponentFactory.register(Small);
 // Компонент для создания элемента маркированного списка
 export class Bullet extends BaseComponent {
     tag = 'bullet';
-
+    hasText = true;
     render(): string {
         let attrs = this.getAttributes();
         return `<div class="bullet-item"${attrs}><div class="bullet-marker"></div><div class="bullet-content">${this.childs()}</div></div>`;
@@ -65,7 +67,7 @@ ComponentFactory.register(Bullet);
 export class Pill extends BaseComponent {
     tag = 'pill';
     canParent = ['info', 'tkml', 'desc', 'title', 'section']; // Исправляем bulletr на bullet
-
+    hasText = true;
     render(): string {
         const id = this.getId();
         let icon = '';

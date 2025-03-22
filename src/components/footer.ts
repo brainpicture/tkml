@@ -2,6 +2,7 @@ import { BaseComponent, ComponentFactory } from '../components';
 
 export class Footer extends BaseComponent {
     tag = 'footer';
+    hasText = true;
 
     render(): string {
         let attrs = this.getAttributes();

@@ -3,6 +3,7 @@ import { encodeUrl, safeIds } from '../util';
 
 export class Header extends BaseComponent {
     tag = 'header';
+    hasText = true;
 
     render(): string {
         let attrs = this.getAttributes();
@@ -24,6 +25,7 @@ ComponentFactory.register(Header);
 export class Back extends BaseComponent {
     tag = 'back';
     canParent = ['header']; // Back может быть только внутри header
+    hasText = true;
 
     render(): string {
         let attrs = this.getAttributes();

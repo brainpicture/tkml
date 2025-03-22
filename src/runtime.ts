@@ -136,7 +136,6 @@ export class Runtime {
         }
 
 
-
         parser.add(content);
 
         this.beforeRender.forEach(fn => fn());
@@ -217,7 +216,6 @@ export class Runtime {
         let fullUrl;
         if (url === null) {
             url = this.currentUrl;
-            console.log('url is null so fill from current', url);
             fullUrl = url
         } else {
             fullUrl = this.getFullUrl(url)
@@ -250,6 +248,7 @@ export class Runtime {
         const xhr = new XMLHttpRequest();
         xhr.open(postData ? 'POST' : 'GET', fullUrl, true);
         xhr.setRequestHeader('Accept', 'application/tkml');
+        let processedLength = 0;
 
         if (postData) {
             xhr.setRequestHeader('Content-Type', 'application/json');
@@ -268,7 +267,8 @@ export class Runtime {
         }
 
         xhr.onprogress = () => {
-            parser.add(xhr.responseText);
+            parser.add(xhr.responseText.substring(processedLength));
+            processedLength = xhr.responseText.length;
         };
 
         xhr.onload = () => {
@@ -693,7 +693,7 @@ export class Runtime {
         if (this.isServer) return;
 
         const dropdown = document.getElementById(dropdownId);
-        if (!dropdown) return;
+        if (!dropdown || dropdown.classList.contains('disabled')) return;
 
         const toggle = dropdown.querySelector('.dropdown-toggle');
         const menu = dropdown.querySelector('.dropdown-menu');
@@ -727,8 +727,13 @@ export class Runtime {
         }
 
         // Handle option selection
-        const options = dropdown.querySelectorAll('.option');
+        const options = dropdown.querySelectorAll('.option:not(.disabled)');
         options.forEach(option => {
+            // Skip options that have their own href attribute
+            if (option.hasAttribute('href')) {
+                return;
+            }
+
             option.addEventListener('click', (e) => {
                 e.preventDefault();
 
@@ -739,25 +744,50 @@ export class Runtime {
                 option.classList.add('selected');
 
                 // Get the option value and text
-                const value = (option as HTMLElement).getAttribute('value') || '';
+                let value: string;
                 const text = (option as HTMLElement).textContent?.trim() || '';
+                if ((option as HTMLElement).hasAttribute('value')) {
+                    value = (option as HTMLElement).getAttribute('value') || '';
+                } else {
+                    value = text;
+                }
 
                 // Update the hidden input and display
                 if (input) input.value = value;
                 if (display) display.textContent = text;
 
+                // Handle image or icon in the selected option
+                const existingImg = toggle?.querySelector('.dropdown-selected-img');
+                const existingIcon = toggle?.querySelector('.dropdown-selected-icon');
+
+                if (existingImg) existingImg.remove();
+                if (existingIcon) existingIcon.remove();
+
+                // Check if option has an image
+                const optionImg = option.querySelector('.option-img');
+                if (optionImg && toggle) {
+                    const imgClone = optionImg.cloneNode(true) as HTMLElement;
+                    imgClone.classList.remove('option-img');
+                    imgClone.classList.add('dropdown-selected-img');
+                    toggle.insertBefore(imgClone, toggle.firstChild);
+                }
+                // Check if option has an icon
+                else {
+                    const optionIcon = option.querySelector('.option-icon');
+                    if (optionIcon && toggle) {
+                        const iconClone = optionIcon.cloneNode(true) as HTMLElement;
+                        iconClone.classList.remove('option-icon');
+                        iconClone.classList.add('dropdown-selected-icon');
+                        toggle.insertBefore(iconClone, toggle.firstChild);
+                    }
+                }
+
                 // Close the dropdown
                 dropdown.classList.remove('open');
 
-                // Handle href if present
-                const href = (option as HTMLElement).getAttribute('href');
-                if (href) {
-                    this.loader(option as HTMLElement).go(href);
-                }
-
                 // Handle form submission if dropdown has href
                 const dropdownHref = dropdown.getAttribute('data-href');
-                if (dropdownHref && !href) {
+                if (dropdownHref) {
                     // Create a simple object with the dropdown name and value
                     const data: Record<string, string> = {};
                     const name = input.name;

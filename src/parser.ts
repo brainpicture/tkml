@@ -110,9 +110,11 @@ export class Parser {
             }
 
             if (curComponent) {
-                const textComponent = new Text(text);
-                textComponent.parent = curComponent;
-                curComponent.addChild(textComponent);
+                if (text.length > 0 && curComponent.hasText) {
+                    const textComponent = new Text(text);
+                    textComponent.parent = curComponent;
+                    curComponent.addChild(textComponent);
+                }
             }
         };
 
@@ -132,6 +134,7 @@ export class Parser {
         }
 
         this.body += text;
+
         this.parser.write(text);
     }
 

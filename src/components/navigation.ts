@@ -15,6 +15,7 @@ ComponentFactory.register(Navigation);
 export class Next extends BaseComponent {
     tag = 'next';
     canParent = ['navigation'];
+    hasText = true;
 
     render(): string {
         let attrs = this.getAttributes();
@@ -44,6 +45,7 @@ ComponentFactory.register(Next);
 export class Prev extends BaseComponent {
     tag = 'prev';
     canParent = ['navigation'];
+    hasText = true;
 
     render(): string {
         let attrs = this.getAttributes();
@@ -74,6 +76,7 @@ ComponentFactory.register(Prev);
 export class Page extends BaseComponent {
     tag = 'page';
     canParent = ['navigation'];
+    hasText = true;
 
     render(): string {
         let attrs = this.getAttributes();

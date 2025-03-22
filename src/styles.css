@@ -506,7 +506,7 @@ html.dark {
     float: none;
 }
 
-.section.deactivated {
+.section.disabled {
     color: var(--text-secondary);
 }
 
@@ -726,6 +726,7 @@ html.dark {
     color: var(--text-primary);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
+    background-color: rgba(16, 22, 31, 0.6);
     border-bottom: 1px solid transparent;
     align-items: center;
     min-height: 32px;
@@ -899,16 +900,19 @@ html.dark {
     bottom: 0;
     left: 0;
     right: 0;
-    z-index: 100;
-    font-size: 16px;
+    background-color: rgba(16, 22, 31, 0.6);
     padding: 2px 20px;
+    z-index: 900;
+    transition: transform 0.3s ease;
+    border-top: 1px solid var(--border-color);
+
+
+    font-size: 16px;
     color: var(--text-primary);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    transition: border-color 0.2s;
-    margin: 0 -20px;
-    border-top: 1px solid var(--border-color);
     margin-top: auto;
+    margin: 0 -20px;
 }
 
 /* Footer border transition when scrolled to bottom */
@@ -1431,7 +1435,7 @@ html.dark {
     max-height: 0;
     opacity: 0;
     transition: all 0.3s ease;
-    z-index: 100;
+    z-index: 1000;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     box-sizing: border-box;
     /* Include padding in width calculation */
@@ -1479,6 +1483,8 @@ html.dark {
 
 /* Option Component Styles */
 .option {
+    display: flex;
+    align-items: center;
     padding: 12px 16px;
     cursor: pointer;
     transition: background-color 0.2s ease;
@@ -1498,6 +1504,117 @@ html.dark {
 }
 
 .option-content {
+    flex: 1;
+}
+
+/* Option with image */
+.option.with-image {
+    padding: 8px 16px;
+}
+
+.option-img {
+    margin-right: 12px;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.option-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Option icon styles */
+.option-icon {
+    width: 24px;
+    height: 24px;
+    margin-right: 12px;
+    object-fit: cover;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+/* Disabled dropdown styles */
+.dropdown.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.dropdown.disabled .dropdown-toggle {
+    background-color: var(--background-secondary);
+    cursor: not-allowed;
+}
+
+.dropdown.disabled .dropdown-toggle:hover {
+    background-color: var(--background-secondary);
+}
+
+.dropdown.disabled .dropdown-arrow {
+    opacity: 0.5;
+}
+
+/* Disabled option styles */
+.option.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+    color: var(--text-secondary);
+}
+
+.option.disabled .option-content {
+    color: var(--text-secondary);
+}
+
+/* Dropdown toggle with selected image/icon */
+.dropdown-toggle {
     display: flex;
     align-items: center;
+    justify-content: space-between;
+    background-color: var(--background-secondary);
+    color: var(--text-primary);
+    border: none;
+    border-radius: 12px;
+    padding: 16px;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 24px;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+}
+
+.dropdown-display {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dropdown-selected-img {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+.dropdown-selected-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.dropdown-selected-icon {
+    width: 20px;
+    height: 20px;
+    margin-right: 12px;
+    object-fit: cover;
+    border-radius: 4px;
+    flex-shrink: 0;
 }
