@@ -2,6 +2,19 @@ import { BaseComponent, ComponentFactory, Component } from '../components';
 import { encodeUrl, safeIds, safeAttr, resolveUrl } from '../util';
 import { Section } from './index';
 
+// Create Search component for dropdown
+export class Search extends BaseComponent {
+    tag = 'search';
+    canParent = ['dropdown']; // Can only be used inside dropdown
+    hasText = true;
+
+    render(): string {
+        // This component doesn't render directly - its content is used by the parent dropdown
+        return '';
+    }
+}
+ComponentFactory.register(Search);
+
 // Create Option component that inherits from Section
 export class Option extends Section {
     tag = 'option';
@@ -107,6 +120,25 @@ export class Dropdown extends BaseComponent {
         const placeholder = this.attributes['placeholder'] || 'Select an option';
         const isDisabled = this.attributes['disabled'] !== undefined;
 
+        // Find search component if present
+        const searchComponent = this.children.find(child => child.tag === 'search');
+        const hasSearch = !!searchComponent;
+
+        // Get search placeholder text
+        let searchPlaceholder = 'Search...';
+        if (searchComponent) {
+            // Cast to BaseComponent to access the children and render the content
+            const searchBaseComponent = searchComponent as BaseComponent;
+            // Get the text content from the search component
+            searchPlaceholder = searchBaseComponent.children.length > 0
+                ? searchBaseComponent.children.map(child => child.render()).join('')
+                : 'Search...';
+        }
+
+        // Filter out search component from children
+        const optionComponents = this.children.filter(child => child.tag !== 'search');
+        this.children = optionComponents;
+
         // Find selected option or use value attribute
         let selectedValue = this.attributes['value'] || '';
         let displayText = placeholder;
@@ -152,6 +184,7 @@ export class Dropdown extends BaseComponent {
 
         // Generate unique ID for the dropdown
         const dropdownId = `dropdown-${id}`;
+        const searchInputId = `dropdown-search-${id}`;
 
         // Add form submission support
         let formHandler = '';
@@ -164,6 +197,12 @@ export class Dropdown extends BaseComponent {
         const disabledClass = isDisabled ? ' disabled' : '';
         if (isDisabled) {
             attrs += ` disabled`;
+        }
+
+        // Add search attribute if present
+        const searchClass = hasSearch ? ' searchable' : '';
+        if (hasSearch) {
+            attrs += ` data-search="true" data-search-placeholder="${safeAttr(searchPlaceholder)}"`;
         }
 
         // Add initialization code
@@ -189,8 +228,25 @@ export class Dropdown extends BaseComponent {
         // Render children directly in the dropdown menu
         const options = this.childs();
 
+        // Add search input if search is enabled
+        const searchInput = hasSearch ? `
+            <div class="dropdown-search">
+                <svg class="dropdown-search-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M11 19C15.4183 19 19 15.4183 19 11C19 6.58172 15.4183 3 11 3C6.58172 3 3 6.58172 3 11C3 15.4183 6.58172 19 11 19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M21 21L16.65 16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <input id="${searchInputId}" type="text" class="dropdown-search-input" placeholder="${safeAttr(searchPlaceholder)}">
+                <button class="dropdown-search-clear" type="button">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+            </div>
+        ` : '';
+
         return `
-            <div id="${dropdownId}" class="dropdown${disabledClass}"${formHandler} ${attrs}>
+            <div id="${dropdownId}" class="dropdown${disabledClass}${searchClass}"${formHandler} ${attrs}>
                 <input type="hidden" name="${safeAttr(name)}" value="${safeAttr(selectedValue)}"${isDisabled ? ' disabled' : ''}>
                 <div class="dropdown-toggle">
                     ${selectedImage}
@@ -202,7 +258,11 @@ export class Dropdown extends BaseComponent {
                     </svg>
                 </div>
                 <div class="dropdown-menu">
-                    ${options}
+                    ${searchInput}
+                    <div class="dropdown-options">
+                        ${options}
+                    </div>
+                    <div class="dropdown-no-results" style="display: none;">No results found</div>
                 </div>
             </div>
         `;

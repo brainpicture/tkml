@@ -113,12 +113,11 @@ export class TKML {
         return true;
     }
 
-    public fromUrl(): boolean {
+    public setCurrentUrl() {
         if (isBrowser) {
             if (this.runtime.options.URLControl) {
                 let path = window.location.pathname;
                 if (path.startsWith('/') && path.length > 1) {
-                    this.runtime.load(path, false);
                     this.runtime.currentUrl = path;
                     return true;
                 }
@@ -126,13 +125,20 @@ export class TKML {
                 // Используем hash без декодирования
                 const hash = window.location.hash.slice(1);
                 if (hash) {
-                    this.runtime.load(hash, false);
                     this.runtime.currentUrl = hash;
                     return true;
                 }
             }
         }
-        return false;
+    }
+
+    public fromUrl(): boolean {
+        if (!isBrowser) {
+            return false
+        }
+        this.setCurrentUrl()
+        this.runtime.load(this.runtime.currentUrl, false);
+        return true
     }
 
     public addPage(path: string, content: string) {
@@ -143,12 +149,14 @@ export class TKML {
     // start TKML using routes from URL
     public route() {
         if (!this.fromUrl()) {
+            this.setCurrentUrl()
             this.load('/')
         }
     }
 
     // Статический метод для компиляции TKML в HTML
     public compile(tkml: string): string {
+        this.setCurrentUrl()
         return this.runtime.compile(tkml);
     }
 

@@ -3,6 +3,7 @@ import { encodeUrl } from '../util';
 
 export class Radio extends BaseComponent {
     tag = 'radio';
+    hasText = true;
 
     render(): string {
         let attrs = this.getAttributes();

@@ -281,6 +281,9 @@ export class Runtime {
                 if (callback) {
                     callback();
                 }
+                if (!target && this.isBrowser && updateHistory) {
+                    window.scrollTo({ top: 0 });
+                }
 
                 // Call the page update method after loading
                 setTimeout(() => this.onPageUpdate(), 0);
@@ -398,7 +401,10 @@ export class Runtime {
 
                     // Загружаем контент
                     element.classList.add('loading');
-                    this.go(url, true, undefined, component);
+                    //this.go(url, true, undefined, component);
+                    url = decodeURIComponent(url);
+                    url = this.fixUrl(url)
+                    this.load(url, false, undefined, true, undefined, component);
                 }
             });
         }, {
@@ -699,19 +705,84 @@ export class Runtime {
         const menu = dropdown.querySelector('.dropdown-menu');
         const input = dropdown.querySelector('input[type="hidden"]') as HTMLInputElement;
         const display = dropdown.querySelector('.dropdown-display');
+        const isSearchable = dropdown.classList.contains('searchable');
+        const searchInput = dropdown.querySelector('.dropdown-search-input') as HTMLInputElement;
+        const searchClear = dropdown.querySelector('.dropdown-search-clear');
+        const optionsContainer = dropdown.querySelector('.dropdown-options');
+        const noResults = dropdown.querySelector('.dropdown-no-results');
+
+        // Define filterOptions function at a higher scope so it can be accessed by multiple handlers
+        const filterOptions = (query: string) => {
+            if (!isSearchable) return;
+
+            const options = dropdown.querySelectorAll('.option');
+            let hasVisibleOptions = false;
+
+            options.forEach(option => {
+                const text = option.textContent?.toLowerCase() || '';
+                if (text.includes(query.toLowerCase())) {
+                    (option as HTMLElement).style.display = '';
+                    hasVisibleOptions = true;
+                } else {
+                    (option as HTMLElement).style.display = 'none';
+                }
+            });
+
+            // Show/hide no results message
+            if (noResults) {
+                (noResults as HTMLElement).style.display = hasVisibleOptions ? 'none' : 'block';
+            }
+        };
 
         // Toggle dropdown menu
         toggle?.addEventListener('click', function (e) {
             e.preventDefault();
             dropdown.classList.toggle('open');
+
+            // Focus search input when dropdown is opened
+            if (isSearchable && dropdown.classList.contains('open')) {
+                setTimeout(() => {
+                    searchInput?.focus();
+                }, 100);
+            }
         });
 
         // Close dropdown when clicking outside
         document.addEventListener('click', function (e) {
             if (!dropdown.contains(e.target as Node)) {
                 dropdown.classList.remove('open');
+
+                // Only clear search when dropdown is fully closed
+                setTimeout(() => {
+                    if (!dropdown.classList.contains('open') && isSearchable && searchInput) {
+                        searchInput.value = '';
+                        filterOptions('');
+                    }
+                }, 300); // Wait for dropdown close animation to finish
             }
         });
+
+        // Handle search functionality
+        if (isSearchable && searchInput) {
+            // Add input event listener
+            searchInput.addEventListener('input', function () {
+                filterOptions(this.value);
+            });
+
+            // Add clear button functionality
+            searchClear?.addEventListener('click', function () {
+                if (searchInput) {
+                    searchInput.value = '';
+                    searchInput.focus();
+                    filterOptions('');
+                }
+            });
+
+            // Prevent dropdown from closing when clicking in the search input
+            searchInput.addEventListener('click', function (e) {
+                e.stopPropagation();
+            });
+        }
 
         // Find initially selected option
         const selectedOption = dropdown.querySelector('.option.selected');
@@ -798,6 +869,9 @@ export class Runtime {
                 // Close the dropdown
                 dropdown.classList.remove('open');
 
+                // Store current search value to maintain filtered state
+                const currentSearchValue = searchInput ? searchInput.value : '';
+
                 // Handle form submission if dropdown has href
                 const dropdownHref = dropdown.getAttribute('data-href');
                 if (dropdownHref) {
@@ -813,6 +887,51 @@ export class Runtime {
                 // Trigger change event
                 const event = new Event('change', { bubbles: true });
                 dropdown.dispatchEvent(event);
+
+                // Clear search only after dropdown is fully closed
+                setTimeout(() => {
+                    if (!dropdown.classList.contains('open') && isSearchable && searchInput) {
+                        searchInput.value = '';
+                        filterOptions('');
+                    }
+                }, 300); // Wait for dropdown close animation to finish
+            });
+        });
+    }
+
+    public initializeTabBar(barId: string): void {
+        if (this.isServer) return;
+
+        const tabBar = document.getElementById(barId);
+        if (!tabBar) return;
+
+        const tabs = tabBar.querySelectorAll('.tab:not(.disabled)');
+
+        // Find initially active tab or set the first one as active
+        let activeTab = tabBar.querySelector('.tab.active');
+        if (!activeTab && tabs.length > 0) {
+            activeTab = tabs[0];
+            activeTab.classList.add('active');
+        }
+
+        // Add click event listeners to tabs
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                // Skip if tab is already active
+                if (tab.classList.contains('active')) return;
+
+                // Remove active class from all tabs
+                tabs.forEach(t => t.classList.remove('active'));
+
+                // Add active class to clicked tab
+                tab.classList.add('active');
+
+                // Trigger change event
+                const event = new CustomEvent('tabchange', {
+                    bubbles: true,
+                    detail: { tabId: tab.id }
+                });
+                tabBar.dispatchEvent(event);
             });
         });
     }

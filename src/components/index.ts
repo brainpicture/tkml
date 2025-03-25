@@ -159,7 +159,6 @@ export class ComponentFactory {
             }
             // Проверяем ограничения родительского компонента
             if (component.canParent && parent && !component.canParent.includes(parent.tag)) {
-                console.trace(`Component <${tag}> cannot be a child of <${parent.tag}>`);
                 component = new Error(`Component <${tag}> cannot be a child of <${parent.tag}>`);
             }
         } else {
@@ -337,36 +336,6 @@ export class List extends BaseComponent {
 ComponentFactory.register(List);
 
 
-export class Input extends BaseComponent {
-    tag = 'input';
-
-    render(): string {
-        let attrs = this.getAttributes();
-        if (this.attributes['placeholder']) {
-            attrs += ` placeholder="${this.attributes['placeholder']}"`;
-        }
-        if (this.attributes['value']) {
-            attrs += ` value="${safeAttr(this.attributes['value'])}"`;
-        }
-        if (this.attributes['type']) {
-            attrs += ` type="${safeAttr(this.attributes['type'])}"`;
-        }
-        if (this.attributes['name']) {
-            attrs += ` name="${safeAttr(this.attributes['name'])}"`;
-        }
-
-        if (this.attributes['href']) {
-            const url = encodeUrl(this.attributes['href']);
-            const paramName = this.attributes['name'] || 'input';
-            attrs += ` onkeydown="if(event.key==='Enter'){tkmlr(${this.runtime?.getId()}).loader(this.parentElement).post('${url}', {${safeAttr(paramName)}: this.value})}"`;
-        }
-
-        return `<div class="input-wrapper"><input class="input"${attrs}/><div class="input-spinner"></div></div>`;
-    }
-}
-
-ComponentFactory.register(Input);
-
 export class Code extends BaseComponent {
     tag = 'code';
     content: string = '';
@@ -435,6 +404,7 @@ ComponentFactory.register(Info);
 
 export class Checkbox extends BaseComponent {
     tag = 'checkbox';
+    hasText = true;
 
     constructor(attributes: Record<string, string>) {
         super(attributes);
@@ -723,3 +693,5 @@ import './button';
 import './a';
 import './radio';
 import './dropdown';
+import './bar';
+import './input';
