@@ -66,7 +66,7 @@ ComponentFactory.register(Bullet);
 
 export class Pill extends BaseComponent {
     tag = 'pill';
-    canParent = ['info', 'tkml', 'desc', 'title', 'section']; // Исправляем bulletr на bullet
+    canParent = ['info', 'tkml', 'desc', 'title', 'section', 'p']; // Исправляем bulletr на bullet
     hasText = true;
     render(): string {
         const id = this.getId();

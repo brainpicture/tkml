@@ -204,7 +204,7 @@ export class Runtime {
     }
 
     // rootElement can be a component (which should be replaced with content) or a string (dom id of element which would be updated with the result)
-    public load(url: string | null, updateHistory: boolean = false, postData?: Record<string, string>, noCache?: boolean, target?: string, rootElement?: Component | string, callback?: () => void) {
+    public load(url: string | null, updateHistory: boolean = false, postData?: Record<string, any>, noCache?: boolean, target?: string, rootElement?: Component | string, callback?: () => void) {
         // В серверном окружении просто возвращаем
         if (this.isServer) return;
 
@@ -221,22 +221,6 @@ export class Runtime {
             fullUrl = this.getFullUrl(url)
         }
 
-
-        if (updateHistory && !rootElement) {
-            //let historyUrl = (!this.currentHost || this.currentHost == window.location.origin) ? url : fullUrl;
-            let historyUrl = url
-            if (historyUrl.match(/^https?:\/\//)) {
-                historyUrl = historyUrl.replace(/^https?:\/\//, '//');
-            }
-            if (this.options.URLControl) {
-                window.history.pushState({ url: fullUrl }, '', historyUrl);
-            } else {
-                // Обновляем hash с форматированным URL без кодирования
-                const formattedUrl = this.formatUrl(url);
-                window.history.pushState({ url: fullUrl }, '', '#' + historyUrl);
-            }
-            this.currentUrl = url // now update current url
-        }
 
         // Check cache first
         if (!postData && !noCache && this.hasCache(fullUrl)) {
@@ -281,8 +265,26 @@ export class Runtime {
                 if (callback) {
                     callback();
                 }
-                if (!target && this.isBrowser && updateHistory) {
-                    window.scrollTo({ top: 0 });
+
+                if (updateHistory && !rootElement) {
+                    //let historyUrl = (!this.currentHost || this.currentHost == window.location.origin) ? url : fullUrl;
+                    let historyUrl = url
+                    if (historyUrl.match(/^https?:\/\//)) {
+                        historyUrl = historyUrl.replace(/^https?:\/\//, '//');
+                    }
+                    if (this.options.URLControl) {
+                        window.history.pushState({ url: fullUrl }, '', historyUrl);
+                    } else {
+                        // Обновляем hash с форматированным URL без кодирования
+                        const formattedUrl = this.formatUrl(url);
+                        window.history.pushState({ url: fullUrl }, '', '#' + historyUrl);
+                    }
+                    if (this.currentUrl != url) {
+                        if (!target && this.isBrowser) {
+                            window.scrollTo({ top: 0 });
+                        }
+                    }
+                    this.currentUrl = url // now update current url
                 }
 
                 // Call the page update method after loading
@@ -682,15 +684,34 @@ export class Runtime {
         return params;
     }
 
-    // Method to handle post requests with querystring data
-    public loadPost(url: string | null, queryString: string, target?: string): Runtime {
-        if (this.aborted) {
-            this.resetState();
-            return this;
-        }
+    private parsePostData(postData: string): Record<string, string> {
+        // Try parsing as JSON first
+        try {
+            return JSON.parse(postData);
+        } catch {
+            // Not JSON, treat as comma-separated field names
+            const fields = postData.split(',').map(f => f.trim());
+            const formData: Record<string, string> = {};
 
-        const params = this.parseQueryString(queryString);
-        this.post(url, params, target);
+            fields.forEach(field => {
+                const input = document.querySelector(`[name="${field}"]`) as HTMLInputElement | HTMLTextAreaElement;
+                if (input && 'value' in input) {
+                    formData[field] = input.value;
+                }
+            });
+
+            return formData;
+        }
+    }
+
+    public loadPost(url: string | null, postData: string, target?: string): Runtime {
+        if (this.aborted) return this;
+
+        // Parse the post data string into an object
+        const parsedData = this.parsePostData(postData);
+
+        // Call the post method with the parsed data
+        this.post(url, parsedData, target);
         return this;
     }
 

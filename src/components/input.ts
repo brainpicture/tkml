@@ -6,26 +6,34 @@ export class Input extends BaseComponent {
 
     render(): string {
         let attrs = this.getAttributes();
-        if (this.attributes['placeholder']) {
-            attrs += ` placeholder="${this.attributes['placeholder']}"`;
-        }
-        if (this.attributes['value']) {
-            attrs += ` value="${safeAttr(this.attributes['value'])}"`;
-        }
-        if (this.attributes['type']) {
-            attrs += ` type="${safeAttr(this.attributes['type'])}"`;
-        }
-        if (this.attributes['name']) {
-            attrs += ` name="${safeAttr(this.attributes['name'])}"`;
+        const type = this.attributes['type'] || 'text';
+
+        // Add basic attributes
+        //attrs += ` type="${type == 'search' ? 'text' : type}"`;
+        attrs += ` type="${type}"`;
+        attrs += this.attributes['placeholder'] ? ` placeholder="${safeAttr(this.attributes['placeholder'])}"` : '';
+        attrs += this.attributes['value'] ? ` value="${safeAttr(this.attributes['value'])}"` : '';
+        attrs += this.attributes['name'] ? ` name="${safeAttr(this.attributes['name'])}"` : '';
+
+        // Add validation attributes based on type
+        if (type === 'email') {
+            attrs += ` pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,}$"`;
+        } else if (type === 'tel') {
+            attrs += ` pattern="^\\+?[1-9]\\d{1,14}$"`;
         }
 
+        // Add real-time validation
+        const validationScript = type !== 'password' ?
+            ` oninput="this.parentElement.classList.toggle('invalid', !this.checkValidity())"` : '';
+
+        // Add form submission handler
         if (this.attributes['href']) {
             const url = encodeUrl(this.attributes['href']);
             const paramName = this.attributes['name'] || 'input';
-            attrs += ` onkeydown="if(event.key==='Enter'){tkmlr(${this.runtime?.getId()}).loader(this.parentElement).post('${url}', {${safeAttr(paramName)}: this.value})}"`;
+            attrs += ` onkeydown="if(event.key==='Enter' && this.checkValidity()){tkmlr(${this.runtime?.getId()}).loader(this.parentElement).post('${url}', {${safeAttr(paramName)}: this.value})}"`;
         }
 
-        return `<div class="input-wrapper"><input class="input"${attrs}/><div class="input-spinner"></div></div>`;
+        return `<div class="input-wrapper${type === 'search' ? ' search' : ''}"><input class="input"${attrs}${validationScript}/><div class="input-spinner"></div></div>`;
     }
 }
 

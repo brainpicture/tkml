@@ -157,9 +157,14 @@ export class ComponentFactory {
             if (ComponentClass === Proxy) {
                 component.tag = tag; // set tag for proxy component
             }
-            // Проверяем ограничения родительского компонента
-            if (component.canParent && parent && !component.canParent.includes(parent.tag)) {
-                component = new Error(`Component <${tag}> cannot be a child of <${parent.tag}>`);
+            if (component.canParent) {
+                if (parent && !component.canParent.includes(parent.tag)) {
+                    component = new Error(`Component <${tag}> cannot be a child of <${parent.tag}>`);
+                }
+            } else {
+                if (parent && parent.tag !== 'tkml') {
+                    component = new Error(`Component <${tag}> cannot be a child of <${parent.tag}>`);
+                }
             }
         } else {
             component = new Undefined(tag, attributes);
@@ -200,6 +205,7 @@ export class Proxy extends BaseComponent {
     tag = 'undefined';
     attributes: Record<string, string>;
     hasText = true;
+    canParent = ['tkml', 'title', 'p', 'desc', 'section', 'pill', 'bubble', 'alert'];
 
 
     constructor(name: string, attributes?: Record<string, string>) {
@@ -400,66 +406,6 @@ export class Info extends BaseComponent {
 ComponentFactory.register(Info);
 
 
-
-
-export class Checkbox extends BaseComponent {
-    tag = 'checkbox';
-    hasText = true;
-
-    constructor(attributes: Record<string, string>) {
-        super(attributes);
-    }
-
-    render(): string {
-        let attrs = this.getAttributes();
-
-        // Handle external links
-        if (this.attributes['external'] !== undefined && this.attributes['href']) {
-            const url = this.attributes['href'];
-            const target = this.attributes['target'] ? ` target="${safeAttr(this.attributes['target'])}"` : '';
-
-            const isChecked = this.attributes['checked'] !== undefined;
-            const checkedClass = isChecked ? ' checked' : '';
-            const checkedAttr = isChecked ? ' checked="checked"' : '';
-
-            attrs += ` onclick="this.classList.toggle('checked'); this.style.opacity='0.5';"`;
-
-            return `
-                <a href="${safeAttr(url)}"${target} class="checkbox${checkedClass}"${checkedAttr}${attrs}>
-                    <div class="checkbox-label">${this.childs()}</div>
-                    <div class="checkbox-toggle">
-                        <div class="checkbox-slider"></div>
-                    </div>
-                </a>
-            `;
-        }
-        else if (this.attributes['href']) {
-            const url = encodeUrl(this.attributes['href']);
-            const target = this.attributes['target'] ? `, '${safeIds(this.attributes['target'])}'` : '';
-            attrs += ` onclick="this.classList.toggle('checked'); this.style.opacity='0.5'; tkmlr(${this.runtime?.getId()}).loader(this).go('${url}', true${target})"`;
-            if (this.attributes['preload'] === 'true') {
-                setTimeout(() => this.runtime?.preload(this.attributes['href']), 0);
-            }
-        } else {
-            attrs += ` onclick="this.classList.toggle('checked')"`;
-        }
-
-        const isChecked = this.attributes['checked'] !== undefined;
-        const checkedClass = isChecked ? ' checked' : '';
-        const checkedAttr = isChecked ? ' checked="checked"' : '';
-
-        return `
-            <div class="checkbox${checkedClass}"${checkedAttr}${attrs}>
-                <div class="checkbox-label">${this.childs()}</div>
-                <div class="checkbox-toggle">
-                    <div class="checkbox-slider"></div>
-                </div>
-            </div>
-        `;
-    }
-}
-ComponentFactory.register(Checkbox);
-
 export class Section extends BaseComponent {
     tag = 'section';
     canParent = ['list', 'info', 'tkml'];
@@ -635,36 +581,6 @@ export class Label extends BaseComponent {
 }
 ComponentFactory.register(Label);
 
-export class Textarea extends BaseComponent {
-    tag = 'textarea';
-    hasText = true;
-
-    render(): string {
-        let attrs = this.getAttributes();
-        if (this.attributes['placeholder']) {
-            attrs += ` placeholder="${this.attributes['placeholder']}"`;
-        }
-        if (this.attributes['value']) {
-            attrs += ` value="${safeAttr(this.attributes['value'])}"`;
-        }
-        if (this.attributes['rows']) {
-            attrs += ` rows="${parseInt(this.attributes['rows'])}"`;
-        }
-        if (this.attributes['name']) {
-            attrs += ` name="${safeAttr(this.attributes['name'])}"`;
-        }
-
-        if (this.attributes['href']) {
-            const url = encodeUrl(this.attributes['href']);
-            const paramName = this.attributes['name'] || 'textarea';
-            attrs += ` onkeydown="if(event.key==='Enter' && event.ctrlKey){tkmlr(${this.runtime?.getId()}).loader(this.parentElement).post('${url}', {${safeAttr(paramName)}: this.value}, 'application/json')}"`;
-        }
-
-        return `<div class="input-wrapper"><textarea class="textarea"${attrs}></textarea><div class="input-spinner"></div></div>`;
-    }
-}
-ComponentFactory.register(Textarea);
-
 export class Msg extends BaseComponent {
     tag = 'msg';
     hasText = true;
@@ -692,6 +608,8 @@ import './menu';
 import './button';
 import './a';
 import './radio';
+import './checkbox';
 import './dropdown';
 import './bar';
 import './input';
+import './textarea';

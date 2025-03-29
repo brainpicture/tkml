@@ -15,6 +15,10 @@ export class Button extends BaseComponent {
             style = ` style="width: ${width.match(/^\d+$/) ? width + 'px' : width}"`;
         }
 
+        const validation = this.attributes['required']
+            ? `.validateFields('${safeIds(this.attributes['required'])}')`
+            : '';
+
         // Handle external links
         if (this.attributes['external'] !== undefined && this.attributes['href']) {
             const url = this.attributes['href'];
@@ -25,7 +29,6 @@ export class Button extends BaseComponent {
         }
         // Handle post parameter
         else if (this.attributes['post']) {
-            const postQueryString = safeAttr(this.attributes['post']);
             let url;
             if ('href' in this.attributes) {
                 url = "'" + encodeUrl(this.attributes['href']) + "'";
@@ -34,21 +37,13 @@ export class Button extends BaseComponent {
             }
             const target = this.attributes['target'] ? `, '${safeIds(this.attributes['target'])}'` : '';
 
-            const validation = this.attributes['required']
-                ? `.validateFields('${safeIds(this.attributes['required'])}')`
-                : '';
-
-            // Use runtime method to parse querystring
-            attrs += ` onclick="tkmlr(${this.runtime?.getId()})${validation}.loader(this).loadPost(${url}, '${postQueryString}'${target})"`;
+            // Use loadPost which now handles parsing internally
+            attrs += ` onclick="tkmlr(${this.runtime?.getId()})${validation}.loader(this).loadPost(${url}, '${safeAttr(this.attributes['post'])}'${target})"`;
         }
         // Regular href handling if post is not specified
         else if (this.attributes['href']) {
             const url = encodeUrl(this.attributes['href']);
             const target = this.attributes['target'] ? `, true, '${safeIds(this.attributes['target'])}'` : '';
-
-            const validation = this.attributes['required']
-                ? `.validateFields('${safeIds(this.attributes['required'])}')`
-                : '';
 
             attrs += ` onclick="tkmlr(${this.runtime?.getId()})${validation}.loader(this).go('${url}'${target})"`;
 

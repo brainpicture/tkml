@@ -245,8 +245,7 @@ export class Dropdown extends BaseComponent {
             </div>
         ` : '';
 
-        return `
-            <div id="${dropdownId}" class="dropdown${disabledClass}${searchClass}"${formHandler} ${attrs}>
+        return `            <div id="${dropdownId}" class="dropdown${disabledClass}${searchClass}"${formHandler} ${attrs}>
                 <input type="hidden" name="${safeAttr(name)}" value="${safeAttr(selectedValue)}"${isDisabled ? ' disabled' : ''}>
                 <div class="dropdown-toggle">
                     ${selectedImage}
