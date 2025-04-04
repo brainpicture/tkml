@@ -65,8 +65,8 @@ export abstract class BaseComponent implements Component {
     renderText(children: Component[]): string {
         return children
             .map(child => {
-                if (child instanceof Text) {
-                    return (child as Text).text;
+                if (child instanceof InnerText) {
+                    return (child as InnerText).text;
                 } else if (child instanceof BaseComponent) {
                     return (child as BaseComponent).renderText(child.children);
                 }
@@ -115,7 +115,7 @@ export abstract class BaseComponent implements Component {
 
             } else {
                 // Для негруппируемых элементов рендерим как обычно
-                if (child instanceof Text) {
+                if (child instanceof InnerText) {
                     let text = child.render();
                     if (text === '' || text.replace(/[\s ]/g, '') === '') {
                         continue;
@@ -191,11 +191,9 @@ export class Root extends BaseComponent {
         super();
     }
 
-
     render(): string {
         let childs = this.childs(); // now rootPrefix would be populated
-        return `${this.rootPrefix}
-        ${childs}`;
+        return `${this.rootPrefix}${childs}`;
     }
 }
 ComponentFactory.register(Root);
@@ -205,7 +203,7 @@ export class Proxy extends BaseComponent {
     tag = 'undefined';
     attributes: Record<string, string>;
     hasText = true;
-    canParent = ['tkml', 'title', 'p', 'desc', 'section', 'pill', 'bubble', 'alert'];
+    canParent = ['tkml', 'title', 'p', 'desc', 'section', 'pill', 'bubble', 'alert', 'text'];
 
 
     constructor(name: string, attributes?: Record<string, string>) {
@@ -286,8 +284,8 @@ export class Alert extends BaseComponent {
 ComponentFactory.register(Alert);
 
 // Inner tag for text fields
-export class Text extends BaseComponent {
-    tag = 'text';
+export class InnerText extends BaseComponent {
+    tag = '_text_';
     text: string;
 
     constructor(text: string) {
@@ -296,27 +294,9 @@ export class Text extends BaseComponent {
     }
 
     render(): string {
-        return `${this.text}`;
+        return this.text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 }
-
-export class Desc extends BaseComponent {
-    tag = 'desc';
-    hasText = true;
-
-    constructor(attributes: Record<string, string>) {
-        super(attributes);
-    }
-
-    render(): string {
-        let attrs = this.getAttributes();
-        let centerClass = this.attributes['center'] !== undefined ? ' center' : '';
-
-        return `<p class="desc${centerClass}"${attrs}>${this.childs()}</p>`;
-    }
-}
-ComponentFactory.register(Desc);
-
 
 export class List extends BaseComponent {
     tag = 'list';
@@ -502,6 +482,7 @@ ComponentFactory.register(Section);
 export class Loader extends BaseComponent {
     tag = 'loader';
     hasText = true;
+    canParent = ['tkml', 'list', 'info'];
 
     render(): string {
         const id = this.getId();

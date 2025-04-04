@@ -10,6 +10,8 @@ export class Menu extends BaseComponent {
         let attrs = this.getAttributes();
         const id = this.getId();
 
+
+
         // Sandwich icon SVG
         const menuIcon = `
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -24,12 +26,22 @@ export class Menu extends BaseComponent {
             contentUrl = this.attributes['href'];
         }
 
-        this.addRootPrefix(`<div class="menu-panel" id="menu-panel-${id}">
-                <div class="menu-panel-content" id="menu-panel-${id}-content"></div>
-            </div>
-            <div class="menu-overlay" id="menu-overlay-${id}" onclick="tkmlr(${this.runtime?.getId()}).closeMenu('${id}')"></div>`)
+        // Initialize menu in browser environment
+        if (this.runtime && this.runtime.isBrowser) {
+            this.runtime.leftMenuTriggerId = id;
+            setTimeout(() => {
+                this.runtime?.initializeMenu(id, contentUrl);
+            }, 0);
+        } else if (this.runtime) {
+            // Add script for server-side rendering
+            this.runtime.onload.push(`
+                (function() {
+                    tkmlr(${this.runtime.getId()}).initializeMenu('${id}', '${encodeUrl(contentUrl)}');
+                })();
+            `);
+        }
 
-        // Create menu button, panel and overlay using simplified runtime methods
+        // Create menu button
         return `
             <div class="header-menu" onclick="tkmlr(${this.runtime?.getId()}).toggleMenu('${id}', '${encodeUrl(contentUrl)}')"${attrs}>${menuIcon}</div>
         `;

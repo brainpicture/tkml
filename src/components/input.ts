@@ -3,6 +3,7 @@ import { encodeUrl, safeAttr } from '../util';
 
 export class Input extends BaseComponent {
     tag = 'input';
+    canParent = ['section', 'list', 'info', 'tkml', 'footer'];
 
     render(): string {
         let attrs = this.getAttributes();

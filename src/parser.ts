@@ -1,5 +1,5 @@
 import { SAXParser, Tag } from 'sax';
-import { ComponentFactory, Component, Text, Root, Code } from './components';
+import { ComponentFactory, Component, InnerText, Root, Code } from './components';
 import { Runtime } from './runtime';
 
 export class Parser {
@@ -111,7 +111,7 @@ export class Parser {
 
             if (curComponent) {
                 if (text.length > 0 && curComponent.hasText) {
-                    const textComponent = new Text(text);
+                    const textComponent = new InnerText(text);
                     textComponent.parent = curComponent;
                     curComponent.addChild(textComponent);
                 }

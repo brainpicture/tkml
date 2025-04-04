@@ -14,14 +14,18 @@ export interface TKMLOptions {
 }
 
 export class TKML {
-    root: HTMLElement | null;
+    wrap: HTMLElement | null;
+    root: HTMLElement | null = null;
     rootUrl: string = '';
     runtime: Runtime;
+    menuLeft: HTMLElement | null = null;
+    menuRight: HTMLElement | null = null;
+    menuOverlay: HTMLElement | null = null;
 
     constructor(container: HTMLElement | null, opts: TKMLOptions = {}) {
-        this.root = container;
+        this.wrap = container;
         this.runtime = new Runtime(this, opts);
-
+        console.log('TKML constructor', this.wrap);
         // Регистрируем экземпляр Runtime только в браузерном окружении
         if (isBrowser) {
             (window as any).TKML_RUNTIMES.set(this.runtime.getId(), this.runtime);
@@ -33,9 +37,8 @@ export class TKML {
                 document.documentElement.classList.add('light')
             }
 
-            if (this.root) {
-                this.root.classList.add('tkml-cont')
-            }
+            // Initialize layout structure
+            this.initializeLayout(opts.instanceId);
 
             // Load plugins if specified
             if (opts.plugins && opts.plugins.length > 0) {
@@ -44,6 +47,66 @@ export class TKML {
 
             (window as any).TKMLInstance = this;
         }
+    }
+
+    // Initialize the layout structure
+    private initializeLayout(forceInstanceId: number | undefined): void {
+        console.log('initializeLayout!!', this.wrap);
+        if (!this.wrap) {
+            return;
+        }
+
+        if (forceInstanceId) {
+            let l = document.getElementById(`menu-left-${forceInstanceId}`);
+            if (l) {
+                this.menuLeft = l;
+                this.menuRight = document.getElementById(`menu-right-${forceInstanceId}`);
+                this.menuOverlay = document.getElementById(`menu-overlay-${forceInstanceId}`);
+
+                if (this.menuOverlay) {
+                    this.menuOverlay.onclick = () => this.runtime.closeMenu();
+                }
+                this.runtime.menuLeft = this.menuLeft;
+                this.runtime.menuRight = this.menuRight;
+                this.runtime.menuOverlay = this.menuOverlay;
+
+                this.root = document.getElementById(`cont-${forceInstanceId}`);
+                // elements are indexed, exit
+                return;
+            }
+        }
+
+        this.wrap.className = 'tkml-cont';
+
+        // Create menu-left element
+        this.menuLeft = document.createElement('div');
+        this.menuLeft.className = 'menu menu-left';
+        this.menuLeft.id = `menu-left-${this.runtime.getId()}`;
+        this.wrap.appendChild(this.menuLeft);
+
+        // Create menu-right element
+        this.menuRight = document.createElement('div');
+        this.menuRight.className = 'menu menu-right';
+        this.menuRight.id = `menu-right-${this.runtime.getId()}`;
+        this.wrap.appendChild(this.menuRight);
+
+        // Create the single overlay and append to body
+        this.menuOverlay = document.createElement('div');
+        this.menuOverlay.className = 'menu-overlay';
+        this.menuOverlay.id = `menu-overlay-${this.runtime.getId()}`;
+        this.wrap.appendChild(this.menuOverlay);
+        // Add onclick to close the currently active menu
+        this.menuOverlay.onclick = () => this.runtime.closeMenu();
+
+        // Create content container for the main page content
+        this.root = document.createElement('div');
+        this.root.id = `cont-${this.runtime.getId()}`;
+        this.wrap.appendChild(this.root);
+
+        // Store references in runtime for easy access
+        this.runtime.menuLeft = this.menuLeft;
+        this.runtime.menuRight = this.menuRight;
+        this.runtime.menuOverlay = this.menuOverlay;
     }
 
     // Method to load plugin scripts

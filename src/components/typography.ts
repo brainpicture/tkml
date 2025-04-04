@@ -53,6 +53,45 @@ export class Small extends BaseComponent {
 }
 ComponentFactory.register(Small);
 
+
+export class Desc extends BaseComponent {
+    tag = 'desc';
+    hasText = true;
+    canParent = ['tkml', 'info', 'list', 'section'];
+
+    constructor(attributes: Record<string, string>) {
+        super(attributes);
+    }
+
+    render(): string {
+        let attrs = this.getAttributes();
+        let centerClass = this.attributes['center'] !== undefined ? ' center' : '';
+
+        return `<p class="desc${centerClass}"${attrs}>${this.childs()}</p>`;
+    }
+}
+ComponentFactory.register(Desc);
+
+export class Text extends BaseComponent {
+    tag = 'text';
+    hasText = true;
+    canParent = ['tkml', 'info', 'list'];
+
+    constructor(attributes: Record<string, string>) {
+        super(attributes);
+    }
+
+    render(): string {
+        let attrs = this.getAttributes();
+        let centerClass = this.attributes['center'] !== undefined ? ' center' : '';
+
+        return `<p class="text${centerClass}"${attrs}>${this.childs()}</p>`;
+    }
+}
+ComponentFactory.register(Text);
+
+
+
 // Компонент для создания элемента маркированного списка
 export class Bullet extends BaseComponent {
     tag = 'bullet';

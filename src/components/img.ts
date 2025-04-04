@@ -4,6 +4,7 @@ import { safeAttr, resolveUrl } from '../util';
 export class Img extends BaseComponent {
     tag = 'img';
     selfClosing = true;
+    canParent = ['section', 'list', 'info', 'tkml', 'bubble'];
 
     constructor(attributes: Record<string, string>) {
         super(attributes);

@@ -13,6 +13,7 @@ export class Header extends BaseComponent {
         // Регистрируем наблюдение за скроллом
         setTimeout(() => {
             if (this.runtime && !this.runtime.isServer) {
+
                 this.runtime.observeHeader(id);
             }
         }, 0);

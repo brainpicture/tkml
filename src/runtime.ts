@@ -24,7 +24,14 @@ export class Runtime {
     public onload: string[] = [];
     private beforeRender: (() => void)[] = [];
     public pluginUrls: string[] = [];
-
+    public menuLeft: HTMLElement | null = null;
+    public menuRight: HTMLElement | null = null;
+    public menuOverlay: HTMLElement | null = null;
+    private leftMenuContentUrl: string | null = null;
+    public leftMenuTriggerId: string | null = null;
+    public leftMenuOpened: boolean = false;
+    private handleResizeBound: (() => void) | null = null;
+    private loadedMenuContentUrl: string | null = null;
 
     constructor(tkmlInstance: TKML, options: TKMLOptions = {}) {
         this.instanceId = options.instanceId || ++Runtime.counter;
@@ -141,7 +148,6 @@ export class Runtime {
         this.beforeRender.forEach(fn => fn());
 
         parser.finish();
-        this.onPageUpdate();
     }
 
     // fix url will add subpath from current location or host and path if needed, but this url will
@@ -203,6 +209,42 @@ export class Runtime {
         return baseHost + url;
     }
 
+    public pageChanged(url: string, fullUrl: string, target?: string) {
+        //let historyUrl = (!this.currentHost || this.currentHost == window.location.origin) ? url : fullUrl;
+        let historyUrl = url
+        if (historyUrl.match(/^https?:\/\//)) {
+            historyUrl = historyUrl.replace(/^https?:\/\//, '//');
+        }
+        if (this.options.URLControl) {
+            window.history.pushState({ url: fullUrl }, '', historyUrl);
+        } else {
+            // Обновляем hash с форматированным URL без кодирования
+            const formattedUrl = this.formatUrl(url);
+            window.history.pushState({ url: fullUrl }, '', '#' + historyUrl);
+        }
+
+        if (this.currentUrl != url) {
+            if (!target && this.isBrowser) {
+                window.scrollTo({ top: 0 });
+                // Close menu only on narrow screens during page change
+                if (this.leftMenuContentUrl) {
+                    if (!this.isWideScreen()) {
+                        this.closeMenu();
+                    }
+                }
+            }
+        }
+        console.log('this.leftMenuTriggerId', this.leftMenuTriggerId)
+        if (!this.leftMenuTriggerId) {
+            console.log('close Menu here')
+            this.closeMenu();
+            this.leftMenuContentUrl = null;
+        }
+        this.currentUrl = url // now update current url
+
+        this.updateFooterPosition();
+    }
+
     // rootElement can be a component (which should be replaced with content) or a string (dom id of element which would be updated with the result)
     public load(url: string | null, updateHistory: boolean = false, postData?: Record<string, any>, noCache?: boolean, target?: string, rootElement?: Component | string, callback?: () => void) {
         // В серверном окружении просто возвращаем
@@ -221,10 +263,17 @@ export class Runtime {
             fullUrl = this.getFullUrl(url)
         }
 
+        if (updateHistory && !rootElement) {
+            this.leftMenuTriggerId = null;
+        }
+
 
         // Check cache first
         if (!postData && !noCache && this.hasCache(fullUrl)) {
             this.popCache(fullUrl, target, rootElement);
+            if (updateHistory && !rootElement) {
+                this.pageChanged(url, fullUrl, target);
+            }
             callback && callback();
             return;
         }
@@ -267,24 +316,7 @@ export class Runtime {
                 }
 
                 if (updateHistory && !rootElement) {
-                    //let historyUrl = (!this.currentHost || this.currentHost == window.location.origin) ? url : fullUrl;
-                    let historyUrl = url
-                    if (historyUrl.match(/^https?:\/\//)) {
-                        historyUrl = historyUrl.replace(/^https?:\/\//, '//');
-                    }
-                    if (this.options.URLControl) {
-                        window.history.pushState({ url: fullUrl }, '', historyUrl);
-                    } else {
-                        // Обновляем hash с форматированным URL без кодирования
-                        const formattedUrl = this.formatUrl(url);
-                        window.history.pushState({ url: fullUrl }, '', '#' + historyUrl);
-                    }
-                    if (this.currentUrl != url) {
-                        if (!target && this.isBrowser) {
-                            window.scrollTo({ top: 0 });
-                        }
-                    }
-                    this.currentUrl = url // now update current url
+                    this.pageChanged(url, fullUrl, target);
                 }
 
                 // Call the page update method after loading
@@ -427,6 +459,7 @@ export class Runtime {
         if (this.isServer) return;
         const footer = document.getElementById(footerId);
         if (!footer) return;
+        if (footer.parentElement?.id !== 'cont-' + this.getId()) return;
 
         let lastScrollY = window.scrollY;
         let ticking = false;
@@ -482,6 +515,7 @@ export class Runtime {
         if (this.isServer) return;
         const header = document.getElementById(headerId);
         if (!header) return;
+        if (header.parentElement?.id !== 'cont-' + this.getId()) return;
 
         let ticking = false;
         const updateHeader = () => {
@@ -547,7 +581,14 @@ export class Runtime {
         this.onload = [`tkmlr(${this.instanceId}).onPageUpdate();`]; // clear onload
         const parser = new Parser(null, this);
         parser.add(tkml);
-        return parser.finish() || '';
+        let content = parser.finish() || '';
+
+        return `<div id="container-${this.instanceId}" class="tkml-cont">
+<div class="menu menu-left" id="menu-left-${this.instanceId}"></div>
+<div class="menu menu-right" id="menu-right-${this.instanceId}"></div>
+<div class="menu-overlay" id="menu-overlay-${this.instanceId}"></div>
+<div id="cont-${this.instanceId}">${content}</div>
+</div>`
     }
 
     // Add a new universal method for page updates
@@ -557,11 +598,30 @@ export class Runtime {
         // Update footer position based on scroll presence
         this.updateFooterPosition();
 
+        // Handle menu state and content after page update
+        if (this.menuLeft && this.menuOverlay) {
+            const isWideScreen = this.isWideScreen();
+            // Determine if the menu should be visible based on state or screen width
 
-        // Here we can add other page updates
-        // for example: this.updateLazyImages();
-        // or: this.updateDynamicElements();
+            // --- Step 1: Ensure Correct Open/Closed State ---
+            if (isWideScreen) {
+                // Ensure menu is open if it should be (based on having an initialized trigger)
+                if (this.leftMenuTriggerId && !this.leftMenuOpened) {
+                    // Use toggleMenu to handle opening. It will also handle the initial load
+                    // and update loadedMenuContentUrl via its callback.
+                    console.log("onPageUpdate: Re-opening menu on wide screen.");
+                    // Use setTimeout to avoid potential conflicts if called too early
+                    setTimeout(() => this.openMenu(this.leftMenuTriggerId!, this.leftMenuContentUrl || ''), 0);
+                }
+                // Ensure overlay is closed on wide screens
+                if (this.menuOverlay.classList.contains('open')) {
+                    this.menuOverlay.classList.remove('open');
+                    document.body.style.overflow = '';
+                }
+            }
+        }
     }
+
 
     // Private method to update footer position (called on resize)
     private updateFooterPosition(): void {
@@ -613,55 +673,148 @@ export class Runtime {
         });
     }
 
-    // Simplified menu toggle method
-    public toggleMenu(id: string, contentUrl?: string): void {
-        if (this.isServer) return;
+    public openMenu(triggerId: string, contentUrl: string = ''): void {
+        if (this.isServer || !this.menuLeft || !this.menuOverlay || this.leftMenuOpened) {
+            return;
+        }
 
-        const menuId = `menu-panel-${id}`;
-        const overlayId = `menu-overlay-${id}`;
+        console.log('ONOPEN', this.menuLeft, this.leftMenuOpened)
+        console.trace()
 
-        const menu = document.getElementById(menuId);
-        const overlay = document.getElementById(overlayId);
+        this.leftMenuOpened = true;
+        this.tkmlInstance.wrap?.classList.add('menu-left-active');
+        // Update current trigger/URL immediately for state tracking
+        this.leftMenuTriggerId = triggerId;
 
-        if (!menu || !overlay) return;
+        // Load content if URL is provided AND it's different from what's loaded
+        const targetFixedUrl = contentUrl ? this.fixUrl(decodeURIComponent(contentUrl)) : null;
 
-        if (menu.classList.contains('open')) {
-            menu.classList.remove('open');
-            overlay.classList.remove('open');
-            //document.body.style.overflow = '';
+        this.leftMenuContentUrl = targetFixedUrl;
+        const isWideScreen = this.isWideScreen();
+
+        if (!isWideScreen) {
+            this.menuOverlay.classList.add('open');
+            document.body.style.overflow = 'hidden';
         } else {
-            menu.classList.add('open');
-            overlay.classList.add('open');
-            //document.body.style.overflow = 'hidden';
+            this.menuOverlay.classList.remove('open');
+            document.body.style.overflow = '';
+        }
 
-            // Load content if not already loaded and contentUrl is provided
-            if (contentUrl && !menu.dataset.loaded) {
-                menu.classList.add('loading');
-                //this.go(contentUrl, true, undefined, `${menuId}-content`);
-                contentUrl = decodeURIComponent(contentUrl);
-                contentUrl = this.fixUrl(contentUrl)
-                this.load(contentUrl, false, undefined, false, undefined, `${menuId}-content`, () => {
-                    menu.classList.remove('loading');
-                });
-                menu.dataset.loaded = 'true';
-            }
+
+        if (targetFixedUrl && targetFixedUrl !== this.loadedMenuContentUrl) {
+            this.menuLeft.innerHTML = ''; // Clear before loading
+            // Use the loader's callback to update loadedMenuContentUrl
+            this.loader(this.menuLeft).load(targetFixedUrl, false, undefined, false, undefined, this.menuLeft.id, () => {
+                this.loadedMenuContentUrl = targetFixedUrl; // Update tracker *after* load
+            });
+        } else if (!targetFixedUrl && this.loadedMenuContentUrl) {
+            // Opening menu without a URL, clear if old content exists
+            this.menuLeft.innerHTML = '';
+            this.loadedMenuContentUrl = null;
+        } else if (targetFixedUrl && targetFixedUrl === this.loadedMenuContentUrl) {
+            // Content is already correct, do nothing to the innerHTML
+        } else {
+            // Opening without URL, and no old content was loaded.
+            this.menuLeft.innerHTML = ''; // Ensure it's empty
+            this.loadedMenuContentUrl = null;
         }
     }
 
-    public closeMenu(id: string): void {
-        if (this.isServer) return;
+    // Close menu method - closes any active menu (left or right)
+    public closeMenu(): void {
+        if (this.isServer || !this.menuOverlay || !this.leftMenuOpened) {
+            return;
+        }
+        // Don't close if we are on a wide screen where it should stay open
+        /*if (this.isWideScreen()) {
+            console.log("closeMenu: Skipped closing on wide screen.");
+            return;
+        }*/
 
-        const menuId = `menu-panel-${id}`;
-        const overlayId = `menu-overlay-${id}`;
+        // Deactivate both left and right menus if they exist
+        if (this.menuLeft) this.tkmlInstance.wrap?.classList.remove('menu-left-active');
 
-        const menu = document.getElementById(menuId);
-        const overlay = document.getElementById(overlayId);
+        this.menuOverlay.classList.remove('open');
+        document.body.style.overflow = ''; // Restore scrolling
 
-        if (!menu || !overlay) return;
+        this.leftMenuOpened = false;
+        // Do NOT reset loadedMenuContentUrl here, onPageUpdate needs it for comparison.
+    }
 
-        menu.classList.remove('open');
-        overlay.classList.remove('open');
-        //document.body.style.overflow = '';
+    // Simplified menu toggle method
+    public toggleMenu(triggerId: string, contentUrl: string = ''): void {
+        if (!this.leftMenuOpened) {
+            this.openMenu(triggerId, contentUrl);
+        } else {
+            // Closing the menu
+            this.closeMenu();
+        }
+    }
+
+    public isWideScreen(): boolean {
+        return window.innerWidth > 1200;
+    }
+
+    // Auto-open menu on page load for wide screens
+    public initializeMenu(triggerId: string, contentUrl: string = ''): void {
+        if (this.isServer || !this.menuLeft) return;
+
+        // Update runtime state with the details from the *current* page's menu component
+        // This is crucial for onPageUpdate to know the *intended* state after navigation
+        contentUrl = this.fixUrl(decodeURIComponent(contentUrl)) || '';
+
+        console.log(`initializeMenu: Setting leftMenuTriggerId=${triggerId}, leftMenuContentUrl=${contentUrl}, oldURL=${this.leftMenuContentUrl}`);
+        if (contentUrl !== this.leftMenuContentUrl) {
+            this.leftMenuContentUrl = contentUrl;
+            this.loader(this.menuLeft).load(contentUrl, false, undefined, false, undefined, this.menuLeft.id, () => {
+                if (this.menuLeft) {
+                    this.menuLeft.scrollTop = 0;
+                }
+                if (this.isWideScreen()) {
+                    this.openMenu(triggerId, contentUrl);
+                }
+            })
+        }
+
+
+        // Setup resize listener (ensure only one)
+        window.removeEventListener('resize', this.handleResizeBound!);
+        this.handleResizeBound = () => this.handleMenuResize();
+        window.addEventListener('resize', this.handleResizeBound);
+        this.handleMenuResize();
+    }
+
+    // Handle menu resize
+    private handleMenuResize(): void {
+        // This primarily ensures the *visual state* (open/closed/overlay) is correct on resize.
+        // Content loading decisions are mainly handled by toggleMenu and onPageUpdate.
+        if (this.isServer || !this.menuLeft || !this.menuOverlay) return;
+
+        const isWideScreen = this.isWideScreen();
+
+        if (isWideScreen) {
+            // Ensure overlay is closed if it somehow became open
+            if (this.menuOverlay.classList.contains('open')) {
+                this.menuOverlay.classList.remove('open');
+                document.body.style.overflow = '';
+            }
+            if (!this.tkmlInstance.wrap?.classList.contains('wide-screen')) {
+                this.tkmlInstance.wrap?.classList.add('wide-screen');
+                if (this.leftMenuTriggerId) {
+                    console.log('openMenu on resize to wide screen', this.leftMenuTriggerId, this.leftMenuContentUrl)
+                    this.openMenu(this.leftMenuTriggerId, this.leftMenuContentUrl || '');
+                }
+            }
+        } else {
+            // Narrow screen: If menu is open, ensure overlay is open and body scroll is hidden
+            if (this.leftMenuOpened) {
+                if (!this.menuOverlay.classList.contains('open')) {
+                    this.menuOverlay.classList.add('open');
+                }
+                document.body.style.overflow = 'hidden';
+            }
+            this.tkmlInstance.wrap?.classList.remove('wide-screen');
+        }
     }
 
     // Helper method to parse querystring to object

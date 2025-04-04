@@ -1,13 +1,14 @@
 :root {
     /* Основные цвета */
-    --background-primary: #EFEEF3;
+    --background-primary: #10161F;
+    --background-menu: #0d131d;
     --background-secondary: #1d2633;
-    --background-menu: #c0c9d7;
     --background-hover: #252f3d;
 
     /* Текст */
     --text-primary: #fff;
     --text-secondary: #8994a3;
+    --scroll-color: #323b48;
     --text-dark: #333;
 
     /* Акцентные цвета */
@@ -25,11 +26,6 @@
     --undefined-color: #9a22ef;
 }
 
-/* Темная тема */
-html.dark {
-    --background-primary: #10161F;
-    --background-menu: #0d131d;
-}
 
 body {
     margin: 0px;
@@ -41,6 +37,11 @@ body {
     padding: 10px 20px 0px;
     max-width: 600px;
     margin: 0 auto;
+    transition: padding 0.3s ease;
+}
+
+.tkml-cont.menu-left-active.wide-screen {
+    padding-left: 450px;
 }
 
 .tkml-cont a {
@@ -94,6 +95,7 @@ html {
 }
 
 .button {
+    display: inline-block;
     margin: 10px 0;
     background-color: var(--accent-primary);
     color: var(--text-primary);
@@ -114,6 +116,7 @@ html {
     transition: all 0.2s ease;
     transform: translateY(0);
     box-shadow: 0 2px 4px rgba(69, 174, 245, 0.2);
+    box-sizing: border-box;
 
     /* Add margin to the right of each button except the last one */
     &+.button {
@@ -221,7 +224,7 @@ a.loading {
     }
 }
 
-html.dark {
+html {
     background-color: var(--background-primary);
     color: var(--text-primary);
 }
@@ -239,7 +242,7 @@ html.dark {
     color: var(--text-secondary)
 }
 
-.dark .title {
+.title {
     color: var(--text-primary);
 }
 
@@ -289,7 +292,7 @@ html.dark {
     color: var(--overlay-light-active);
 }
 
-.dark .input {
+.input {
     background-color: var(--background-secondary);
 }
 
@@ -741,6 +744,11 @@ html.dark {
     transition: border-color 0.2s;
 }
 
+.menu .header {
+    position: relative;
+    border-bottom: none;
+}
+
 .header.scrolled {
     border-bottom: 1px solid var(--border-color);
 }
@@ -839,44 +847,32 @@ html.dark {
     transform: scale(0.95);
 }
 
-.menu-panel {
+.menu {
+    padding: 0px 20px;
+}
+
+.menu-overlay {
     position: fixed;
     top: 0;
     left: 0;
-    width: 280px;
-    width: 80%;
-    max-width: 540px;
-
-
+    width: 100%;
     height: 100%;
-    background-color: var(--background-menu);
-    z-index: 1000;
-    transform: translateX(-100%);
-    transition: transform 0.3s ease;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
-    overflow-y: auto;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 998;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
 }
 
-.menu-panel.open {
-    transform: translateX(0);
+.menu-overlay.open {
+    opacity: 1;
+    visibility: visible;
 }
 
-.menu-panel.loading::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 30px;
-    height: 30px;
-    margin: -15px 0 0 -15px;
-    border: 3px solid transparent;
-    border-top-color: var(--text-primary);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-}
 
-.menu-panel-content {
-    padding: 20px;
+/* Prevent body scrolling when menu is open */
+body.menu-open {
+    overflow: hidden;
 }
 
 .menu-overlay {
@@ -926,6 +922,11 @@ html.dark {
 /* Footer border transition when scrolled to bottom */
 .footer.scrolled-to-bottom {
     border-top-color: transparent;
+}
+
+.menu .footer {
+    position: relative;
+    border-top: none;
 }
 
 /* Pill styles */
@@ -1343,7 +1344,7 @@ html.dark {
     vertical-align: baseline;
 }
 
-.dark .bullet-content {
+.bullet-content {
     color: var(--text-primary);
 }
 
@@ -1807,4 +1808,117 @@ html.dark {
 
 .input[type="search"]::-webkit-search-cancel-button:hover {
     opacity: 1;
+}
+
+/* Menu layout styles */
+.menu {
+    position: fixed;
+    top: 0;
+    left: 0;
+    max-width: 450px;
+    width: 78vw;
+    height: 100vh;
+    background-color: var(--background-menu);
+    z-index: 999;
+    transform: translateX(-100%);
+    /* Start off-screen */
+    transition: transform 0.3s ease, opacity 0.3s ease, visibility 0.3s ease;
+    /* Add opacity and visibility to transition */
+    overflow-y: auto;
+    border-right: 1px solid var(--border-color);
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
+    /* display: none; */
+    /* Remove display: none */
+    visibility: hidden;
+    /* Hide initially */
+    opacity: 0;
+    /* Make transparent initially */
+}
+
+.menu-left-active .menu-left {
+    transform: translateX(0);
+    /* Slide in */
+    /* display: block; */
+    /* Remove display: block */
+    visibility: visible;
+    /* Make visible */
+    opacity: 1;
+    /* Make opaque */
+}
+
+/* Dark theme scrollbar styling for menu */
+.menu::-webkit-scrollbar {
+    width: 8px;
+    /* Width of the scrollbar */
+}
+
+.menu::-webkit-scrollbar-track {
+    background: var(--background-menu);
+    /* Track color, same as menu background */
+    border-radius: 4px;
+}
+
+.menu::-webkit-scrollbar-thumb {
+    background-color: var(--scroll-color);
+    /* Thumb color */
+    border-radius: 4px;
+    border: 2px solid var(--background-menu);
+    /* Creates padding around thumb */
+}
+
+.menu::-webkit-scrollbar-thumb:hover {
+    background-color: var(--text-primary);
+    /* Thumb color on hover */
+}
+
+/* Firefox scrollbar styling */
+.menu {
+    scrollbar-width: thin;
+    /* Or "auto" */
+    scrollbar-color: var(--scroll-color) var(--background-menu);
+    /* thumb track */
+}
+
+
+.menu-right {
+    left: auto;
+    right: 0px;
+    transform: translateX(100%);
+    /* Start off-screen to the right */
+    border-right: none;
+    /* Remove right border */
+    border-left: 1px solid var(--border-color);
+    /* Add left border */
+}
+
+.menu-right-active .menu-right {
+    transform: translateX(0);
+    /* Slide in from the right */
+}
+
+
+/* Menu panel content styles */
+.menu-panel-content {
+    padding: 0px 20px;
+    height: 100vh;
+    overflow-y: auto;
+}
+
+/* Menu overlay styles */
+.menu-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 998;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.menu-overlay.open {
+    opacity: 1;
+    visibility: visible;
 }
