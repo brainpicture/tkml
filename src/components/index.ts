@@ -110,8 +110,12 @@ export abstract class BaseComponent implements Component {
             const child = children[i];
 
 
-            if (groupable && child.tag === 'pill') {
-                currentGroup.push(child.render());
+            if (groupable && ['pill', 'b', 'i', '_text_'].includes(child.tag)) {
+                let text = child.render();
+                if (child instanceof InnerText && text.replace(/[\s ]/g, '') === '') {
+                    continue
+                }
+                currentGroup.push(text);
 
             } else {
                 // Для негруппируемых элементов рендерим как обычно
@@ -203,7 +207,7 @@ export class Proxy extends BaseComponent {
     tag = 'undefined';
     attributes: Record<string, string>;
     hasText = true;
-    canParent = ['tkml', 'title', 'p', 'desc', 'section', 'pill', 'bubble', 'alert', 'text'];
+    canParent = ['tkml', 'title', 'p', 'desc', 'section', 'pill', 'bubble', 'alert', 'text', 'info', 'box'];
 
 
     constructor(name: string, attributes?: Record<string, string>) {
@@ -373,6 +377,7 @@ ComponentFactory.register(Code);
 export class Info extends BaseComponent {
     tag = 'info';
     canParent = ['tkml'];
+    hasText = true;
 
     renderChildren(children: Component[]): string {
         return this.wrapChildrenInDivs(children, this.tag, true);
@@ -594,3 +599,7 @@ import './dropdown';
 import './bar';
 import './input';
 import './textarea';
+import './quote';
+import './box';
+import './center';
+import './autoupdate';

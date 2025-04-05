@@ -38,6 +38,9 @@ body {
     max-width: 600px;
     margin: 0 auto;
     transition: padding 0.3s ease;
+    line-height: 1.6;
+    font-size: 16px;
+    color: var(--text-primary);
 }
 
 .tkml-cont.menu-left-active.wide-screen {
@@ -46,6 +49,10 @@ body {
 
 .tkml-cont a {
     text-decoration: none;
+}
+
+.a {
+    color: var(--accent-primary);
 }
 
 .undefined {
@@ -232,6 +239,8 @@ html {
 .desc {
     color: var(--text-secondary);
     font-size: 14px;
+    line-height: 1.6;
+    margin-bottom: 0.8em;
 }
 
 .desc.center {
@@ -545,6 +554,7 @@ html {
     flex: 1;
     padding: 14px 0;
     align-items: center;
+    line-height: 1.6;
 }
 
 .section-content .pill {
@@ -1815,24 +1825,16 @@ body.menu-open {
     position: fixed;
     top: 0;
     left: 0;
-    max-width: 450px;
+    max-width: 380px;
     width: 78vw;
     height: 100vh;
-    background-color: var(--background-menu);
+    background-color: var(--background-primary);
     z-index: 999;
     transform: translateX(-100%);
-    /* Start off-screen */
     transition: transform 0.3s ease, opacity 0.3s ease, visibility 0.3s ease;
-    /* Add opacity and visibility to transition */
     overflow-y: auto;
-    border-right: 1px solid var(--border-color);
-    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
-    /* display: none; */
-    /* Remove display: none */
     visibility: hidden;
-    /* Hide initially */
     opacity: 0;
-    /* Make transparent initially */
 }
 
 .menu-left-active .menu-left {
@@ -1922,3 +1924,147 @@ body.menu-open {
     opacity: 1;
     visibility: visible;
 }
+
+/* Quote component styles */
+.quote {
+    position: relative;
+    padding: 10px 10px 10px 40px;
+    margin: 15px 0;
+    font-style: italic;
+    color: var(--text-secondary);
+    background-color: rgba(255, 255, 255, 0.03);
+    border-left: 3px solid var(--accent-primary);
+    border-radius: 4px;
+}
+
+.quote-icon {
+    position: absolute;
+    left: 8px;
+    top: 8px;
+    width: 20px;
+    height: 20px;
+    color: var(--accent-primary);
+    opacity: 0.7;
+}
+
+.quote-content {
+    line-height: 1.5;
+}
+
+/* Style for the <p> tag (rendered with class 'p') */
+.p {
+    line-height: 1.7;
+    margin-top: 0;
+    margin-bottom: 1em;
+    color: var(--text-primary);
+}
+
+.p:last-child {
+    margin-bottom: 0;
+}
+
+/* Apply consistent line-height to common content wrappers */
+.section-content,
+.list-item>div,
+.info-content,
+.bubble-content,
+.msg-content,
+.footer-content {
+    line-height: 1.6;
+}
+
+/* Box component styles */
+.box {
+    background-color: rgba(20, 30, 40, 0.5);
+    /* Slightly darker than info background */
+    border-radius: 12px;
+    margin-bottom: 16px;
+    /* Ensures content respects the rounded corners */
+    padding: 16px;
+    margin: 10px 0px;
+    /* Default padding */
+}
+
+/* Optional padding variations */
+.box.padding-small {
+    padding: 8px;
+}
+
+.box.padding-large {
+    padding: 24px;
+}
+
+.box.padding-none {
+    padding: 0;
+}
+
+/* Ensure proper spacing of elements inside box */
+.box>.title {
+    margin-top: 0;
+    margin-bottom: 12px;
+}
+
+.box>.p:first-child,
+.box>.desc:first-child,
+.box>.text:first-child {
+    margin-top: 0;
+}
+
+.box>.p:last-child,
+.box>.desc:last-child,
+.box>.text:last-child,
+.box>.button:last-child {
+    margin-bottom: 0;
+}
+
+.box>.img {
+    margin: 12px 0;
+}
+
+/* --- End of Box styles --- */
+
+/* Center component styles */
+.center-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    /* Space between centered items */
+    margin: 10px 0;
+    width: 100%;
+}
+
+/* Ensure buttons inside center container have proper spacing */
+.center-container>.button {
+    margin: 5px;
+    /* Reduced margin since we're using gap */
+}
+
+/* Ensure full width for certain elements that should stretch */
+.center-container>.p,
+.center-container>.desc,
+.center-container>.text,
+.center-container>.title,
+.center-container>.img,
+.center-container>.section,
+.center-container>.info,
+.center-container>.box {
+    width: 100%;
+    text-align: center;
+}
+
+/* --- End of Center styles --- */
+
+/* AutoUpdate component styles */
+.autoupdate {
+    display: none;
+    /* Hide the component itself */
+    height: 0;
+    width: 0;
+    margin: 0;
+    padding: 0;
+    border: none;
+}
+
+/* --- End of AutoUpdate styles --- */

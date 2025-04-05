@@ -1109,6 +1109,67 @@ export class Runtime {
             });
         });
     }
+
+    /**
+     * Инициализирует автоматическое обновление для элемента
+     * @param elementId ID элемента для обновления
+     * @param url URL для загрузки (если не указан, используется текущий URL)
+     * @param intervalMs Интервал обновления в миллисекундах (если 0, обновление происходит один раз)
+     */
+    public initializeAutoUpdate(elementId: string, url: string, intervalMs: number = 0): void {
+        if (this.isServer) return;
+
+        // Получаем элемент по ID
+        const element = document.getElementById(elementId);
+        if (!element) {
+            console.warn(`AutoUpdate: Element with ID ${elementId} not found`);
+            return;
+        }
+
+        // Функция обновления
+        const updateFunction = () => {
+            console.log(`AutoUpdate: Refreshing content from ${url}`);
+            this.loader(element).load(url, false, undefined, true); // noCache=true
+        };
+
+        // Если интервал > 0, настраиваем периодическое обновление
+        if (intervalMs > 0) {
+            // Очищаем предыдущий интервал, если он был
+            const previousIntervalId = element.getAttribute('data-interval-id');
+            if (previousIntervalId) {
+                clearInterval(parseInt(previousIntervalId));
+            }
+
+            // Устанавливаем новый интервал
+            const intervalId = setInterval(updateFunction, intervalMs);
+
+            // Сохраняем ID интервала в атрибуте элемента
+            element.setAttribute('data-interval-id', intervalId.toString());
+
+            // Очищаем интервал при удалении элемента
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    mutation.removedNodes.forEach((node) => {
+                        if (node === element || (node instanceof Element && node.contains(element))) {
+                            clearInterval(intervalId);
+                            observer.disconnect();
+                        }
+                    });
+                });
+            });
+
+            // Наблюдаем за изменениями в DOM
+            observer.observe(document.body, { childList: true, subtree: true });
+
+            // Также очищаем интервал при смене страницы
+            window.addEventListener('beforeunload', () => {
+                clearInterval(intervalId);
+            }, { once: true });
+        } else {
+            // Если интервал = 0, выполняем обновление один раз с небольшой задержкой
+            setTimeout(updateFunction, 100);
+        }
+    }
 }
 
 // Глобальный реестр для экземпляров Runtime только в браузере

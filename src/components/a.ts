@@ -3,6 +3,8 @@ import { encodeUrl, safeIds, safeAttr } from '../util';
 
 export class A extends BaseComponent {
     tag = 'a';
+    hasText = true;
+    canParent = ['tkml', 'info', 'footer', 'quote', 'text', 'p', 'desc'];
 
     renderChildren(children: Component[]): string {
         return this.renderText(children);
@@ -43,7 +45,7 @@ export class A extends BaseComponent {
             }
         }
 
-        return `<a${attrs}>${this.childs()}</a>`;
+        return `<a class="a" ${attrs}>${this.childs()}</a>`;
     }
 }
 ComponentFactory.register(A); 

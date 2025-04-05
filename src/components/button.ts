@@ -4,7 +4,7 @@ import { encodeUrl, safeIds, safeAttr } from '../util';
 export class Button extends BaseComponent {
     tag = 'button';
     hasText = true;
-    canParent = ['tkml', 'info', 'list', 'footer'];
+    canParent = ['tkml', 'info', 'list', 'footer', 'center'];
 
     render(): string {
         let attrs = this.getAttributes();

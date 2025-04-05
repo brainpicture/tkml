@@ -22,7 +22,7 @@ ComponentFactory.register(W);
 // Компонент для переноса строки
 export class Br extends BaseComponent {
     tag = 'br';
-    canParent = ['p', 'info', 'desc', 'title', 'section', 'tkml']; // Разрешаем использовать внутри текстовых элементов
+    canParent = ['p', 'info', 'desc', 'title', 'section', 'tkml', 'text']; // Разрешаем использовать внутри текстовых элементов
     selfClosing = true;
     render(): string {
         return '<br/>';
@@ -34,11 +34,13 @@ ComponentFactory.register(Br);
 export class P extends BaseComponent {
     tag = 'p';
     hasText = true;
-    canParent = ['info', 'desc', 'section', 'tkml']; // Разрешаем использовать внутри информационных блоков
+    canParent = ['tkml', 'section', 'list', 'info', 'bubble', 'footer', 'quote']; // Example parents
 
     render(): string {
         let attrs = this.getAttributes();
-        return `<p${attrs}>${this.childs()}</p>`;
+        let centerClass = this.attributes['center'] !== undefined ? ' center' : '';
+        // Ensure it renders with a 'p' class for styling
+        return `<p class="p${centerClass}"${attrs}>${this.childs()}</p>`;
     }
 }
 ComponentFactory.register(P);
@@ -105,7 +107,7 @@ ComponentFactory.register(Bullet);
 
 export class Pill extends BaseComponent {
     tag = 'pill';
-    canParent = ['info', 'tkml', 'desc', 'title', 'section', 'p']; // Исправляем bulletr на bullet
+    canParent = ['info', 'tkml', 'desc', 'title', 'section', 'p', 'text']; // Исправляем bulletr на bullet
     hasText = true;
     render(): string {
         const id = this.getId();
