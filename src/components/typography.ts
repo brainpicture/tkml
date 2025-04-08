@@ -22,7 +22,7 @@ ComponentFactory.register(W);
 // Компонент для переноса строки
 export class Br extends BaseComponent {
     tag = 'br';
-    canParent = ['p', 'info', 'desc', 'title', 'section', 'tkml', 'text']; // Разрешаем использовать внутри текстовых элементов
+    canParent = ['p', 'info', 'desc', 'title', 'section', 'tkml', 'text', 'quote']; // Разрешаем использовать внутри текстовых элементов
     selfClosing = true;
     render(): string {
         return '<br/>';

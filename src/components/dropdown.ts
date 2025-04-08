@@ -207,22 +207,7 @@ export class Dropdown extends BaseComponent {
 
         // Add initialization code
         if (this.runtime && !isDisabled) {
-            // For browser environment, initialize immediately
-            if (this.runtime.isBrowser) {
-                setTimeout(() => {
-                    this.runtime?.initializeDropdown(dropdownId);
-                }, 0);
-            }
-
-            // For server-side rendering, add to onload
-            if (this.runtime.isServer) {
-                this.runtime.onload.push(`
-                    (function() {
-                        const dropdownId = '${dropdownId}';
-                        tkmlr(${this.runtime.getId()}).initializeDropdown(dropdownId);
-                    })();
-                `);
-            }
+            this.runtime.onInit('initializeDropdown', dropdownId);
         }
 
         // Render children directly in the dropdown menu

@@ -21,7 +21,7 @@ export class Runtime {
     public options: TKMLOptions;
     public isServer: boolean;
     public isBrowser: boolean;
-    public onload: string[] = [];
+    public onServerLoad: string[] = [];
     private beforeRender: (() => void)[] = [];
     public pluginUrls: string[] = [];
     public menuLeft: HTMLElement | null = null;
@@ -32,6 +32,8 @@ export class Runtime {
     public leftMenuOpened: boolean = false;
     private handleResizeBound: (() => void) | null = null;
     private loadedMenuContentUrl: string | null = null;
+    private highlightJsInitialized: boolean = false;
+    private initializedFunctions: Set<string> = new Set();
 
     constructor(tkmlInstance: TKML, options: TKMLOptions = {}) {
         this.instanceId = options.instanceId || ++Runtime.counter;
@@ -134,7 +136,7 @@ export class Runtime {
         const content = this.getCache(url)!;
         let parser: Parser;
 
-        this.onload = []; // clear onload
+        this.onServerLoad = []; // clear onload
         if (rootElement && typeof rootElement === 'string') {
             let rootDomEl = document.getElementById(rootElement);
             parser = new Parser(rootDomEl, this, target);
@@ -290,7 +292,7 @@ export class Runtime {
         // rootElement is needed for a loader component
         // load more feature
         let parser: Parser;
-        this.onload = []; // clear onload
+        this.onServerLoad = []; // clear onload
         // for menu – allow to render content in a custom element
         if (typeof rootElement === 'string') {
             let rootDomEl = document.getElementById(rootElement);
@@ -349,7 +351,7 @@ export class Runtime {
     }
 
     public fromText(text: string): string {
-        this.onload = []; // clear onload
+        this.onServerLoad = []; // clear onload
         const parser = new Parser(this.tkmlInstance.root, this);
         parser.add(text);
         return parser.finish() || '';
@@ -393,6 +395,9 @@ export class Runtime {
     }
 
     public loadHighlightJs(): Promise<void> {
+        // Устанавливаем флаг, что инициализация была запрошена
+        this.highlightJsInitialized = true;
+
         if (this.isServer) return Promise.resolve();
         if (Runtime.loadingPromise) return Runtime.loadingPromise;
 
@@ -570,15 +575,8 @@ export class Runtime {
         return this;
     }
 
-    // onload should be added only once per each component
-    public addOnload(component: Component, script: string) {
-        if (component.onloadAdded) return;
-        this.onload.push(script);
-        component.onloadAdded = true;
-    }
-
     compile(tkml: string): string {
-        this.onload = [`tkmlr(${this.instanceId}).onPageUpdate();`]; // clear onload
+        this.onServerLoad = [`tkmlr(${this.instanceId}).onPageUpdate();`]; // clear onload
         const parser = new Parser(null, this);
         parser.add(tkml);
         let content = parser.finish() || '';
@@ -678,9 +676,6 @@ export class Runtime {
             return;
         }
 
-        console.log('ONOPEN', this.menuLeft, this.leftMenuOpened)
-        console.trace()
-
         this.leftMenuOpened = true;
         this.tkmlInstance.wrap?.classList.add('menu-left-active');
         // Update current trigger/URL immediately for state tracking
@@ -752,12 +747,14 @@ export class Runtime {
     }
 
     public isWideScreen(): boolean {
-        return window.innerWidth > 1200;
+        return window.innerWidth > 900;
     }
 
     // Auto-open menu on page load for wide screens
     public initializeMenu(triggerId: string, contentUrl: string = ''): void {
         if (this.isServer || !this.menuLeft) return;
+
+        this.leftMenuTriggerId = triggerId;
 
         // Update runtime state with the details from the *current* page's menu component
         // This is crucial for onPageUpdate to know the *intended* state after navigation
@@ -808,10 +805,11 @@ export class Runtime {
         } else {
             // Narrow screen: If menu is open, ensure overlay is open and body scroll is hidden
             if (this.leftMenuOpened) {
-                if (!this.menuOverlay.classList.contains('open')) {
-                    this.menuOverlay.classList.add('open');
-                }
-                document.body.style.overflow = 'hidden';
+                //if (!this.menuOverlay.classList.contains('open')) {
+                //    this.menuOverlay.classList.add('open');
+                //}
+                //document.body.style.overflow = 'hidden';
+                this.closeMenu();
             }
             this.tkmlInstance.wrap?.classList.remove('wide-screen');
         }
@@ -1119,6 +1117,10 @@ export class Runtime {
     public initializeAutoUpdate(elementId: string, url: string, intervalMs: number = 0): void {
         if (this.isServer) return;
 
+        if (!url || url === '') {
+            url = this.currentUrl;
+        }
+
         // Получаем элемент по ID
         const element = document.getElementById(elementId);
         if (!element) {
@@ -1169,6 +1171,137 @@ export class Runtime {
             // Если интервал = 0, выполняем обновление один раз с небольшой задержкой
             setTimeout(updateFunction, 100);
         }
+    }
+
+    public initPlugin(url: string) {
+        const script = document.createElement('script');
+        script.src = url;
+        script.async = true;
+        script.onload = () => {
+            console.log(`TKML plugin loaded: ${url}`);
+        };
+        script.onerror = (err) => {
+            console.error(`Failed to load TKML plugin: ${url}`, err);
+        };
+        document.head.appendChild(script);
+    }
+
+
+    /**
+     * Регистрирует функцию для выполнения при инициализации страницы
+     * @param functionName Имя функции, которую нужно вызвать
+     * @param params Параметры для передачи в функцию
+     */
+    public onInit(functionName: string, ...params: any[]): void {
+        // Для некоторых функций (например, loadHighlightJs) мы хотим гарантировать уникальность вызова
+        const uniqueFunctions = ['loadHighlightJs'];
+
+        // Если функция должна быть уникальной и уже была вызвана, пропускаем
+        if (uniqueFunctions.includes(functionName) && this.initializedFunctions.has(functionName)) {
+            return;
+        }
+
+        // Отмечаем функцию как инициализированную
+        if (uniqueFunctions.includes(functionName)) {
+            this.initializedFunctions.add(functionName);
+        }
+
+        if (this.isServer) {
+            // Для серверного рендеринга добавляем вызов в onload
+
+            // Преобразуем параметры в JSON-строку для безопасной передачи
+            const paramsString = params.map(p => JSON.stringify(p).replace(/'/g, "\\'")).join(',');
+
+            this.onServerLoad.push(`tkmlr(${this.getId()}).${functionName}(${paramsString});`);
+        } else if (this.isBrowser) {
+            // Для браузера выполняем функцию сразу
+            // Получаем функцию из this по имени
+            const func = (this as any)[functionName];
+            if (typeof func === 'function') {
+                // Вызываем функцию с переданными параметрами
+                setTimeout(() => {
+                    func.apply(this, params);
+                }, 0);
+            } else {
+                console.warn(`Runtime: Function "${functionName}" not found`);
+            }
+        }
+    }
+
+    /**
+     * Загружает плагин по URL
+     * @param pluginUrl URL плагина для загрузки
+     * @returns Promise, который разрешается, когда плагин загружен
+     */
+    public loadPlugin(pluginUrl: string): Promise<void> {
+        if (this.isServer) {
+            return Promise.resolve();
+        }
+
+        // Проверяем, был ли плагин уже загружен
+        if (this.pluginUrls.includes(pluginUrl)) {
+            return Promise.resolve();
+        }
+
+        // Добавляем URL в список загруженных плагинов
+        this.pluginUrls.push(pluginUrl);
+
+        return new Promise((resolve, reject) => {
+            // Создаем элемент script
+            const script = document.createElement('script');
+            script.src = pluginUrl;
+            script.async = true;
+
+            // Обработчики событий загрузки
+            script.onload = () => {
+                console.log(`Plugin loaded: ${pluginUrl}`);
+                resolve();
+            };
+            script.onerror = (error) => {
+                console.error(`Failed to load plugin: ${pluginUrl}`, error);
+                reject(error);
+            };
+
+            // Добавляем скрипт в DOM
+            document.head.appendChild(script);
+        });
+    }
+
+    /**
+     * Подсвечивает элемент с кодом с помощью highlight.js
+     * @param elementId ID элемента для подсветки
+     */
+    public highlightElement(elementId: string): void {
+        if (this.isServer) return;
+
+        this.loadHighlightJs().then(() => {
+            const element = document.getElementById(elementId);
+            if (element) {
+                (window as any).hljs.highlightElement(element);
+            }
+        });
+    }
+
+    // Добавим метод для проверки, был ли уже инициализирован highlight.js
+    public isHighlightJsInitialized(): boolean {
+        return this.highlightJsInitialized;
+    }
+
+    /**
+     * Загружает несколько плагинов по их URL
+     * @param pluginUrls Массив URL плагинов для загрузки
+     * @returns Promise, который разрешается, когда все плагины загружены
+     */
+    public loadPlugins(pluginUrls: string[]): Promise<void[]> {
+        if (this.isServer) {
+            return Promise.resolve([]);
+        }
+
+        // Используем метод loadPlugin для загрузки каждого плагина
+        const promises = pluginUrls.map(url => this.loadPlugin(url));
+
+        // Возвращаем Promise.all для ожидания загрузки всех плагинов
+        return Promise.all(promises);
     }
 }
 

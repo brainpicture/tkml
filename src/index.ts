@@ -112,40 +112,9 @@ export class TKML {
     // Method to load plugin scripts
     private loadPlugins(pluginUrls: string[]): void {
         // For browser environment
-        if (isBrowser) {
-            pluginUrls.forEach(url => {
-                const script = document.createElement('script');
-                script.src = url;
-                script.async = true;
-                script.onload = () => {
-                    console.log(`TKML plugin loaded: ${url}`);
-                };
-                script.onerror = (err) => {
-                    console.error(`Failed to load TKML plugin: ${url}`, err);
-                };
-                document.head.appendChild(script);
-            });
-        }
-        // For server-side rendering
-        else if (isServer) {
-            pluginUrls.forEach(url => {
-                // Add JavaScript code to load the plugin script
-                this.runtime.onload.push(`
-                    (function() {
-                        var script = document.createElement('script');
-                        script.src = "${url}";
-                        script.async = true;
-                        script.onload = function() {
-                            console.log("TKML plugin loaded: ${url}");
-                        };
-                        script.onerror = function(err) {
-                            console.error("Failed to load TKML plugin: ${url}", err);
-                        };
-                        document.head.appendChild(script);
-                    })();
-                `);
-            });
-        }
+        pluginUrls.forEach(url => {
+            this.runtime.onInit('initPlugin', url);
+        });
 
         // For both environments, store plugin URLs in runtime for potential reuse
         this.runtime.pluginUrls = pluginUrls;
@@ -225,7 +194,7 @@ export class TKML {
 
     // is needed to serve runtime js for server side flow
     public getRuntimeJS() {
-        return this.runtime.onload.join('\n');
+        return this.runtime.onServerLoad.join('\n');
     }
 
     public registerComponent(componentClass: new (...args: any[]) => any): void {

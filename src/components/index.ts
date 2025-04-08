@@ -348,23 +348,7 @@ export class Code extends BaseComponent {
         const elementId = this.getId();
 
         // Start loading highlight.js if needed
-        if (this.runtime) {
-            if (this.runtime.isBrowser) {
-                this.runtime.loadHighlightJs().then(() => {
-                    const codeElement = document.getElementById(elementId);
-                    if (codeElement) {
-                        const highlighted = language
-                            ? (window as any).hljs.highlight(code, { language }).value
-                            : (window as any).hljs.highlightAuto(code).value;
-                        codeElement.innerHTML = highlighted;
-                    }
-                });
-            } else {
-                this.runtime.addOnload(this, `tkmlr(${this.runtime.getId()}).loadHighlightJs().then(() => {
-                    window.hljs.highlightElement(document.getElementById('${elementId}'))
-                })`);
-            }
-        }
+        this.runtime?.onInit('highlightElement', elementId);
 
         // Return initial markup with plain code
         const languageClass = language ? ` language-${safeAttr(language)}` : '';

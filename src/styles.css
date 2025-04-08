@@ -43,8 +43,15 @@ body {
     color: var(--text-primary);
 }
 
-.tkml-cont.menu-left-active.wide-screen {
-    padding-left: 450px;
+
+/* --- End of AutoUpdate styles --- */
+
+/* Скрываем оверлей на широких экранах */
+@media (max-width: 1500px) {
+    .tkml-cont.menu-left-active.wide-screen {
+        padding-left: 420px;
+        /* Отступ для широких экранов */
+    }
 }
 
 .tkml-cont a {
@@ -1825,7 +1832,7 @@ body.menu-open {
     position: fixed;
     top: 0;
     left: 0;
-    max-width: 380px;
+    max-width: 360px;
     width: 78vw;
     height: 100vh;
     background-color: var(--background-primary);
@@ -2066,5 +2073,3 @@ body.menu-open {
     padding: 0;
     border: none;
 }
-
-/* --- End of AutoUpdate styles --- */

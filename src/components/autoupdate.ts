@@ -14,7 +14,7 @@ export class AutoUpdate extends BaseComponent {
         const intervalStr = this.attributes['in'] || '';
 
         // Get the URL to update (default to current URL if not specified)
-        const updateUrl = this.attributes['href'] || this.runtime?.currentUrl || '';
+        const updateUrl = this.attributes['href'] || '';
 
         // Parse the interval string to milliseconds
         let intervalMs = 0;
@@ -41,19 +41,7 @@ export class AutoUpdate extends BaseComponent {
         }
 
         // Инициализируем автообновление через runtime
-        if (this.runtime && this.runtime.isBrowser) {
-            // Используем setTimeout для гарантии, что элемент будет в DOM
-            setTimeout(() => {
-                this.runtime?.initializeAutoUpdate(id, updateUrl, intervalMs);
-            }, 0);
-        } else if (this.runtime) {
-            // Для серверного рендеринга добавляем скрипт инициализации
-            this.runtime.onload.push(`
-                (function() {
-                    tkmlr(${this.runtime.getId()}).initializeAutoUpdate("${id}", "${safeAttr(updateUrl)}", ${intervalMs});
-                })();
-            `);
-        }
+        this.runtime?.onInit('initializeAutoUpdate', id, updateUrl, intervalMs);
 
         // Render a minimal placeholder element - важно вернуть элемент с ID
         return `<div id="${id}" class="autoupdate"${attrs} data-interval="${intervalMs}" data-url="${safeAttr(updateUrl)}"></div>`;

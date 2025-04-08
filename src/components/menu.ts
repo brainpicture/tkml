@@ -22,24 +22,12 @@ export class Menu extends BaseComponent {
         `;
 
         let contentUrl = '';
-        if (this.attributes['href']) {
-            contentUrl = this.attributes['href'];
+        if (this.attributes['src']) {
+            contentUrl = this.attributes['src'];
         }
 
         // Initialize menu in browser environment
-        if (this.runtime && this.runtime.isBrowser) {
-            this.runtime.leftMenuTriggerId = id;
-            setTimeout(() => {
-                this.runtime?.initializeMenu(id, contentUrl);
-            }, 0);
-        } else if (this.runtime) {
-            // Add script for server-side rendering
-            this.runtime.onload.push(`
-                (function() {
-                    tkmlr(${this.runtime.getId()}).initializeMenu('${id}', '${encodeUrl(contentUrl)}');
-                })();
-            `);
-        }
+        this.runtime?.onInit('initializeMenu', id, contentUrl);
 
         // Create menu button
         return `

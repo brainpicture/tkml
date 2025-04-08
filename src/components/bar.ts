@@ -57,24 +57,7 @@ export class Bar extends BaseComponent {
         const barId = `bar-${id}`;
 
         // Add initialization code
-        if (this.runtime) {
-            // For browser environment, initialize immediately
-            if (this.runtime.isBrowser) {
-                setTimeout(() => {
-                    this.runtime?.initializeTabBar(barId);
-                }, 0);
-            }
-
-            // For server-side rendering, add to onload
-            if (this.runtime.isServer) {
-                this.runtime.onload.push(`
-                    (function() {
-                        const barId = '${barId}';
-                        tkmlr(${this.runtime.getId()}).initializeTabBar(barId);
-                    })();
-                `);
-            }
-        }
+        this.runtime?.onInit('initializeTabBar', barId);
 
         return `
             <div id="${barId}" class="tab-bar"${attrs}>
