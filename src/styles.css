@@ -34,7 +34,7 @@ body {
 .tkml-cont {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
     flex-direction: column;
-    padding: 10px 20px 0px;
+    padding: 0px 20px 0px;
     max-width: 600px;
     margin: 0 auto;
     transition: padding 0.3s ease;
@@ -846,7 +846,7 @@ html {
     display: flex;
 
     left: 16px;
-    margin-right: 14px;
+    margin: 5px 14px 0px 0px;
     position: absolute;
     align-items: center;
     justify-content: center;
