@@ -679,7 +679,6 @@ export class Runtime {
         this.leftMenuOpened = true;
         this.tkmlInstance.wrap?.classList.add('menu-left-active');
         // Update current trigger/URL immediately for state tracking
-        this.leftMenuTriggerId = triggerId;
 
         // Load content if URL is provided AND it's different from what's loaded
         const targetFixedUrl = contentUrl ? this.fixUrl(decodeURIComponent(contentUrl)) : null;

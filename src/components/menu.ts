@@ -10,6 +10,10 @@ export class Menu extends BaseComponent {
         let attrs = this.getAttributes();
         const id = this.getId();
 
+        if (this.runtime) {
+            this.runtime.leftMenuTriggerId = id;
+        }
+
 
 
         // Sandwich icon SVG
