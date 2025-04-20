@@ -95,6 +95,9 @@ export abstract class BaseComponent implements Component {
         if (this.id) {
             attrs += ` id="${this.id}"`;
         }
+        if (this.attributes['name']) {
+            attrs += ` name="${this.attributes['name']}"`;
+        }
         return attrs;
     }
 
@@ -191,11 +194,16 @@ export class Root extends BaseComponent {
     hasText = true;
     rootPrefix: string = '';
 
-    constructor() {
-        super();
-    }
-
     render(): string {
+        console.log('root is rendered', this.attributes)
+        // Check if theme attribute is present and valid
+        if (this.attributes.theme && (this.attributes.theme === 'light' || this.attributes.theme === 'dark')) {
+            // Use the runtime's setTheme method to apply the theme
+            if (this.runtime) {
+                this.runtime.setTheme(this.attributes.theme as 'light' | 'dark');
+            }
+        }
+
         let childs = this.childs(); // now rootPrefix would be populated
         return `${this.rootPrefix}${childs}`;
     }

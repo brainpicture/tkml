@@ -1,5 +1,5 @@
 import { BaseComponent, ComponentFactory } from '../components';
-import { encodeUrl, safeIds, safeAttr } from '../util';
+import { encodeUrl, safeIds, safeAttr, getComponentHandler } from '../util';
 
 export class Button extends BaseComponent {
     tag = 'button';
@@ -16,10 +16,6 @@ export class Button extends BaseComponent {
             style = ` style="width: ${width.match(/^\d+$/) ? width + 'px' : width}"`;
         }
 
-        const validation = this.attributes['required']
-            ? `.validateFields('${safeIds(this.attributes['required'])}')`
-            : '';
-
         // Handle external links
         if (this.attributes['external'] !== undefined && this.attributes['href']) {
             const url = this.attributes['href'];
@@ -28,30 +24,16 @@ export class Button extends BaseComponent {
             // Convert button to an anchor for external links
             return `<a href="${safeAttr(url)}"${target} class="button${secondaryClass}"${attrs}${style}>${this.childs()}</a>`;
         }
-        // Handle post parameter
-        else if (this.attributes['post']) {
-            let url;
-            if ('href' in this.attributes) {
-                url = "'" + encodeUrl(this.attributes['href']) + "'";
-            } else {
-                url = 'null';
-            }
-            const target = this.attributes['target'] ? `, '${safeIds(this.attributes['target'])}'` : '';
 
-            // Use loadPost which now handles parsing internally
-            attrs += ` onclick="tkmlr(${this.runtime?.getId()})${validation}.loader(this).loadPost(${url}, '${safeAttr(this.attributes['post'])}'${target})"`;
-        }
-        // Regular href handling if post is not specified
-        else if (this.attributes['href']) {
-            const url = encodeUrl(this.attributes['href']);
-            const target = this.attributes['target'] ? `, true, '${safeIds(this.attributes['target'])}'` : '';
+        // Используем универсальную функцию для обработки post/href/required
+        attrs += getComponentHandler(this.runtime?.getId(), this.attributes, {
+            validationField: 'required',  // Передаем параметр для поля required
+            updatePreload: true           // Включаем обработку предзагрузки
+        });
 
-            attrs += ` onclick="tkmlr(${this.runtime?.getId()})${validation}.loader(this).go('${url}'${target})"`;
-
-            // Обновленная проверка preload (как флаг или со значением "true")
-            if (this.attributes['preload'] !== undefined && this.attributes['preload'] !== "false") {
-                setTimeout(() => this.runtime?.preload(this.attributes['href']), 0);
-            }
+        // Обрабатываем предзагрузку, если есть href и preload
+        if (this.attributes['href'] && this.attributes['preload'] !== undefined && this.attributes['preload'] !== "false") {
+            setTimeout(() => this.runtime?.preload(this.attributes['href']), 0);
         }
 
         return `<button class="button${secondaryClass}"${attrs}${style}>${this.childs()}</button>`;

@@ -1,15 +1,19 @@
-:root {
+:root,
+.dark {
     /* Основные цвета */
     --background-primary: #10161F;
     --background-menu: #0d131d;
     --background-secondary: #1d2633;
     --background-hover: #252f3d;
+    --header-background-color: rgba(16, 22, 31, 0.6);
+    --box-background-color: rgba(20, 30, 40, 0.5);
 
     /* Текст */
     --text-primary: #fff;
     --text-secondary: #8994a3;
+    --button-text-color: #fff;
     --scroll-color: #323b48;
-    --text-dark: #333;
+    --text-dark: #fff;
 
     /* Акцентные цвета */
     --accent-primary: #45aef5;
@@ -26,6 +30,36 @@
     --undefined-color: #9a22ef;
 }
 
+.light {
+    /* Основные цвета */
+    --background-primary: #f5f7fa;
+    --background-menu: #ffffff;
+    --background-secondary: #ffffff;
+    --background-hover: #f0f2f5;
+    --header-background-color: rgba(245, 247, 250, 0.8);
+    --box-background-color: rgba(207, 220, 232, 0.8);
+
+    /* Текст */
+    --text-primary: #333;
+    --text-secondary: #6e7a8a;
+    --button-text-color: #fff;
+    --scroll-color: #d1d5db;
+    --text-dark: #333;
+
+    /* Акцентные цвета остаются как есть */
+    --accent-primary: #45aef5;
+    --accent-hover: #3d9cdb;
+
+    /* Вспомогательные цвета */
+    --border-color: rgba(0, 0, 0, 0.1);
+    --overlay-light: rgba(0, 0, 0, 0.05);
+    --overlay-light-hover: rgba(0, 0, 0, 0.08);
+    --overlay-light-active: rgba(0, 0, 0, 0.1);
+
+    /* Цвета для состояний остаются как есть */
+    --error-color: #ff4141;
+    --undefined-color: #9a22ef;
+}
 
 body {
     margin: 0px;
@@ -88,6 +122,7 @@ body {
 
 html {
     background-color: var(--background-primary);
+    color: var(--text-primary);
 }
 
 .title {
@@ -95,7 +130,7 @@ html {
     font-size: 24px;
     font-weight: bold;
     margin: 10px 0;
-    color: var(--text-dark);
+    color: var(--text-primary);
 }
 
 .section .title {
@@ -112,7 +147,7 @@ html {
     display: inline-block;
     margin: 10px 0;
     background-color: var(--accent-primary);
-    color: var(--text-primary);
+    color: var(--button-text-color);
     border: none;
     position: relative;
     user-select: none;
@@ -140,6 +175,7 @@ html {
 
 .button.secondary {
     background-color: var(--background-secondary);
+    color: var(--text-primary);
     box-shadow: none;
 }
 
@@ -301,11 +337,11 @@ html {
 }
 
 .input::placeholder {
-    color: rgba(255, 255, 255, 0.5);
+    color: var(--text-secondary);
 }
 
 .input:focus::placeholder {
-    color: var(--overlay-light-active);
+    color: var(--text-secondary);
 }
 
 .input {
@@ -754,7 +790,7 @@ html {
     color: var(--text-primary);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    background-color: rgba(16, 22, 31, 0.6);
+    background-color: var(--header-background-color);
     border-bottom: 1px solid transparent;
     align-items: center;
     min-height: 32px;
@@ -921,7 +957,7 @@ body.menu-open {
     bottom: 0;
     left: 0;
     right: 0;
-    background-color: rgba(16, 22, 31, 0.6);
+    background-color: var(--header-background-color);
     padding: 2px 20px;
     z-index: 900;
     transition: transform 0.3s ease;
@@ -1125,7 +1161,7 @@ body.menu-open {
 }
 
 .textarea::placeholder {
-    color: rgba(255, 255, 255, 0.5);
+    color: var(--text-secondary);
 }
 
 .textarea:focus {
@@ -1135,7 +1171,7 @@ body.menu-open {
 }
 
 .textarea:focus::placeholder {
-    color: var(--overlay-light-active);
+    color: var(--text-secondary);
 }
 
 .msg {
@@ -1982,7 +2018,7 @@ body.menu-open {
 
 /* Box component styles */
 .box {
-    background-color: rgba(20, 30, 40, 0.5);
+    background-color: var(--box-background-color);
     /* Slightly darker than info background */
     border-radius: 12px;
     margin-bottom: 16px;

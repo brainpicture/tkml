@@ -34,6 +34,7 @@ export class Runtime {
     private loadedMenuContentUrl: string | null = null;
     private highlightJsInitialized: boolean = false;
     private initializedFunctions: Set<string> = new Set();
+    public currentTheme: 'light' | 'dark' = 'light';
 
     constructor(tkmlInstance: TKML, options: TKMLOptions = {}) {
         this.instanceId = options.instanceId || ++Runtime.counter;
@@ -119,7 +120,7 @@ export class Runtime {
         this.load(url, true, undefined, noCache, target, rootElement);
     }
 
-    public post(url: string | null, params: Record<string, string>, target?: string) {
+    public post(url: string | null, params: Record<string, string | string[]>, target?: string) {
         if (url) {
             url = decodeURIComponent(url);
             url = this.fixUrl(url)
@@ -211,6 +212,26 @@ export class Runtime {
         return baseHost + url;
     }
 
+    /**
+     * Set theme for the application
+     * @param theme The theme to set ('light' or 'dark')
+     */
+    public setTheme(theme: 'light' | 'dark'): void {
+        if (!this.isBrowser) return;
+
+        // Remove existing theme classes
+        document.documentElement.classList.remove('light', 'dark');
+
+        // Add the new theme class
+        document.documentElement.classList.add(theme);
+
+        // Store the current theme
+        this.currentTheme = theme;
+
+        // Update options
+        this.options.theme = theme;
+    }
+
     public pageChanged(url: string, fullUrl: string, target?: string) {
         //let historyUrl = (!this.currentHost || this.currentHost == window.location.origin) ? url : fullUrl;
         let historyUrl = url
@@ -271,13 +292,17 @@ export class Runtime {
 
 
         // Check cache first
-        if (!postData && !noCache && this.hasCache(fullUrl)) {
-            this.popCache(fullUrl, target, rootElement);
-            if (updateHistory && !rootElement) {
-                this.pageChanged(url, fullUrl, target);
+        if (this.hasCache(fullUrl)) {
+            if (postData) {
+                this.cache.delete(fullUrl);
+            } else if (!noCache) {
+                this.popCache(fullUrl, target, rootElement);
+                if (updateHistory && !rootElement) {
+                    this.pageChanged(url, fullUrl, target);
+                }
+                callback && callback();
+                return;
             }
-            callback && callback();
-            return;
         }
 
         const xhr = new XMLHttpRequest();
@@ -288,6 +313,7 @@ export class Runtime {
         if (postData) {
             xhr.setRequestHeader('Content-Type', 'application/json');
         }
+        xhr.setRequestHeader('Theme', this.currentTheme);
 
         // rootElement is needed for a loader component
         // load more feature
@@ -383,6 +409,7 @@ export class Runtime {
         const xhr = new XMLHttpRequest();
         xhr.open('GET', fullUrl, true);
         xhr.setRequestHeader('Accept', 'application/tkml');
+        xhr.setRequestHeader('Theme', this.currentTheme);
 
         xhr.onload = () => {
             if (xhr.status === 200) {
@@ -551,19 +578,38 @@ export class Runtime {
         let firstError: HTMLElement | null = null;
 
         fieldList.forEach(field => {
-            const input = document.querySelector(`[name='${field}']`) as HTMLInputElement | null;
-            if (input && !input.value.trim()) {
-                input.classList.add('error');
-                if (!firstError) firstError = input as HTMLElement;
+            const inputs = document.querySelectorAll(`[name="${field}"]`);
+            if (inputs.length) {
+                // If we have multiple elements with the same name
+                if (inputs.length > 1) {
+                    // Create an array for multiple values
+                    const values: string[] = [];
+                    inputs.forEach((element: Element) => {
+                        const input = element as HTMLInputElement | HTMLTextAreaElement;
+                        if ('value' in input) {
+                            values.push(input.value);
+                        }
+                    });
+                } else {
+                    // Single element case
+                    const input = inputs[0] as HTMLInputElement | HTMLTextAreaElement;
+                    if ('value' in input) {
+                        const value = input.value.trim();
+                        if (!value) {
+                            input.classList.add('error');
+                            if (!firstError) firstError = input as HTMLElement;
 
-                const removeError = () => {
-                    input.classList.remove('error');
-                    input.removeEventListener('input', removeError);
-                    input.removeEventListener('focus', removeError);
-                };
+                            const removeError = () => {
+                                input.classList.remove('error');
+                                input.removeEventListener('input', removeError);
+                                input.removeEventListener('focus', removeError);
+                            };
 
-                input.addEventListener('input', removeError);
-                input.addEventListener('focus', removeError);
+                            input.addEventListener('input', removeError);
+                            input.addEventListener('focus', removeError);
+                        }
+                    }
+                }
             }
         });
 
@@ -834,19 +880,40 @@ export class Runtime {
         return params;
     }
 
-    private parsePostData(postData: string): Record<string, string> {
+    private parsePostData(postData: string): Record<string, string | string[]> {
         // Try parsing as JSON first
         try {
             return JSON.parse(postData);
         } catch {
             // Not JSON, treat as comma-separated field names
             const fields = postData.split(',').map(f => f.trim());
-            const formData: Record<string, string> = {};
+            const formData: Record<string, string | string[]> = {};
 
             fields.forEach(field => {
-                const input = document.querySelector(`[name="${field}"]`) as HTMLInputElement | HTMLTextAreaElement;
-                if (input && 'value' in input) {
-                    formData[field] = input.value;
+                const inputs = document.querySelectorAll(`[name="${field}"]`);
+                if (inputs.length) {
+                    // If we have multiple elements with the same name
+                    // Create an array for multiple values
+                    const values: string[] = [];
+                    inputs.forEach((element: Element) => {
+                        const input = element as HTMLInputElement | HTMLTextAreaElement | HTMLElement;
+                        console.log('input CATCHED', input);
+                        if (input.classList.contains('radio') && !input.classList.contains('checked')) {
+                            console.log('radio not checked', input);
+                            return;
+                        }
+                        if (input.classList.contains('checkbox') && !input.classList.contains('checked')) {
+                            console.log('checkbox not checked', input);
+                            return;
+                        }
+                        if ('value' in input) {
+                            values.push(input.value);
+                        } else if (input.getAttribute('value')) {
+                            values.push(input.getAttribute('value')!);
+                        }
+                    });
+
+                    formData[field] = values.length === 1 ? values[0] : values;
                 }
             });
 
@@ -1047,7 +1114,7 @@ export class Runtime {
                 const dropdownHref = dropdown.getAttribute('data-href');
                 if (dropdownHref) {
                     // Create a simple object with the dropdown name and value
-                    const data: Record<string, string> = {};
+                    const data: Record<string, string | string[]> = {};
                     const name = input.name;
                     data[name] = value;
 

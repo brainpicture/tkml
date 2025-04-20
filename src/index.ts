@@ -5,7 +5,7 @@ import { isServer, isBrowser } from './util';
 import './components/index';
 
 export interface TKMLOptions {
-    dark?: boolean;
+    theme?: 'light' | 'dark';
     URLControl?: boolean;
     isServer?: boolean;
     baseUrl?: string; // Базовый URL для серверного окружения
@@ -31,11 +31,9 @@ export class TKML {
             (window as any).TKML_RUNTIMES.set(this.runtime.getId(), this.runtime);
 
             const prefersDarkScheme = window.matchMedia("(prefers-color-scheme: dark)");
-            if (opts.dark || (opts.dark === undefined && prefersDarkScheme.matches)) {
-                document.documentElement.classList.add('dark')
-            } else {
-                document.documentElement.classList.add('light')
-            }
+            console.log('prefersDarkScheme', prefersDarkScheme, opts.theme);
+
+            this.runtime.setTheme(opts.theme || (opts.theme === undefined && prefersDarkScheme.matches ? 'dark' : 'light'));
 
             // Initialize layout structure
             this.initializeLayout(opts.instanceId);
@@ -125,7 +123,7 @@ export class TKML {
     }
 
     // open any TKML page
-    public load(url: string, updateHistory: boolean = false, postData?: Record<string, string>) {
+    public load(url: string, updateHistory: boolean = false, postData?: Record<string, string | string[]>) {
         url = this.runtime.fixUrl(url)
         this.runtime.load(url, updateHistory, postData);
     }

@@ -1,5 +1,5 @@
 import { BaseComponent, ComponentFactory } from './index';
-import { safeAttr, encodeUrl, safeIds } from '../util';
+import { safeAttr, encodeUrl, safeIds, getComponentHandler } from '../util';
 
 export class Checkbox extends BaseComponent {
     tag = 'checkbox';
@@ -33,15 +33,23 @@ export class Checkbox extends BaseComponent {
                 </a>
             `;
         }
-        else if (this.attributes['href']) {
-            const url = encodeUrl(this.attributes['href']);
-            const target = this.attributes['target'] ? `, '${safeIds(this.attributes['target'])}'` : '';
-            attrs += ` onclick="this.classList.toggle('checked'); this.style.opacity='0.5'; tkmlr(${this.runtime?.getId()}).loader(this).go('${url}', true${target})"`;
-            if (this.attributes['preload'] === 'true') {
-                setTimeout(() => this.runtime?.preload(this.attributes['href']), 0);
-            }
-        } else {
+
+        // Используем универсальную функцию с компонент-специфичными действиями для checkbox
+        const checkboxActions = "this.classList.toggle('checked'); this.style.opacity='0.5'; ";
+
+        attrs += getComponentHandler(this.runtime?.getId(), this.attributes, {
+            componentActions: checkboxActions,  // Добавляем специфичные для checkbox действия
+            updatePreload: true                 // Включаем обработку предзагрузки
+        });
+
+        // Если нет post или href, просто добавляем переключение checked
+        if (!this.attributes['post'] && !this.attributes['href']) {
             attrs += ` onclick="this.classList.toggle('checked')"`;
+        }
+
+        // Обрабатываем предзагрузку, если есть href и preload
+        if (this.attributes['href'] && this.attributes['preload'] === 'true') {
+            setTimeout(() => this.runtime?.preload(this.attributes['href']), 0);
         }
 
         const isChecked = this.attributes['checked'] !== undefined;

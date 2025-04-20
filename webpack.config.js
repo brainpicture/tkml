@@ -62,7 +62,7 @@ module.exports = {
         // Используем HtmlWebpackPlugin только в режиме разработки
         ...(isDevelopment ? [
             new HtmlWebpackPlugin({
-                template: './test.html',
+                template: './index.html',
                 filename: 'index.html',
                 inject: false
             }),
@@ -92,8 +92,8 @@ module.exports = {
             port: 9000,
             hot: true,
             liveReload: true,
-            open: ['test.html'],
-            watchFiles: ['src/**/*', 'test.html'],
+            open: ['index.html'],
+            watchFiles: ['src/**/*', 'index.html'],
             client: {
                 overlay: true,
                 progress: true,
