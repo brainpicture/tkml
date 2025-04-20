@@ -13,7 +13,7 @@ export class Radio extends BaseComponent {
 
         if (!isDisabled) {
             // Base radio action that deselects other radios in the same group
-            const radioActions = `document.querySelectorAll('.radio[data-group=\\'${group}\\']').forEach(r => r.classList.remove('checked')); this.classList.add('checked'); this.style.opacity='0.5'; `;
+            const radioActions = `tkmlr(${this.runtime?.getId()}).selectRadio(this, '${group}');`;
 
             // Handle post and href with component-specific behavior
             if (this.attributes['post'] || this.attributes['href']) {

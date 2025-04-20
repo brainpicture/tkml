@@ -246,7 +246,7 @@ export class Runtime {
             window.history.pushState({ url: fullUrl }, '', '#' + historyUrl);
         }
 
-        if (this.currentUrl != url) {
+        if (this.currentUrl?.split('?')[0] !== url?.split('?')[0]) {
             if (!target && this.isBrowser) {
                 window.scrollTo({ top: 0 });
                 // Close menu only on narrow screens during page change
@@ -286,7 +286,7 @@ export class Runtime {
             fullUrl = this.getFullUrl(url)
         }
 
-        if (updateHistory && !rootElement) {
+        if (updateHistory && !rootElement && !target) {
             this.leftMenuTriggerId = null;
         }
 
@@ -1333,6 +1333,11 @@ export class Runtime {
         });
     }
 
+    public selectRadio(element: HTMLElement, group: string): void {
+        document.querySelectorAll(`.radio[data-group='${group}']`).forEach(r => r.classList.remove('checked'));
+        element.classList.add('checked');
+        //element.style.opacity = '0.5';
+    }
     /**
      * Подсвечивает элемент с кодом с помощью highlight.js
      * @param elementId ID элемента для подсветки

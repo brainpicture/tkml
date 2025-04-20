@@ -22,7 +22,7 @@ export class Checkbox extends BaseComponent {
             const checkedClass = isChecked ? ' checked' : '';
             const checkedAttr = isChecked ? ' checked="checked"' : '';
 
-            attrs += ` onclick="this.classList.toggle('checked'); this.style.opacity='0.5';"`;
+            attrs += ` onclick="this.classList.toggle('checked');"`;
 
             return `
                 <a href="${safeAttr(url)}"${target} class="checkbox${checkedClass}"${checkedAttr}${attrs}>
@@ -35,7 +35,7 @@ export class Checkbox extends BaseComponent {
         }
 
         // Используем универсальную функцию с компонент-специфичными действиями для checkbox
-        const checkboxActions = "this.classList.toggle('checked'); this.style.opacity='0.5'; ";
+        const checkboxActions = "this.classList.toggle('checked');";
 
         attrs += getComponentHandler(this.runtime?.getId(), this.attributes, {
             componentActions: checkboxActions,  // Добавляем специфичные для checkbox действия
