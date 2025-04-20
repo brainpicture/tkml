@@ -890,6 +890,13 @@ export class Runtime {
             const formData: Record<string, string | string[]> = {};
 
             fields.forEach(field => {
+                // Validate field name contains only valid HTML id characters
+                if (!/^[a-zA-Z0-9-_]+$/.test(field)) {
+                    // Try parsing as querystring
+                    const queryParams = this.parseQueryString(field);
+                    Object.assign(formData, queryParams);
+                    return;
+                }
                 const inputs = document.querySelectorAll(`[name="${field}"]`);
                 if (inputs.length) {
                     // If we have multiple elements with the same name
@@ -926,6 +933,7 @@ export class Runtime {
 
         // Parse the post data string into an object
         const parsedData = this.parsePostData(postData);
+        console.log('loadPost', url, parsedData, target);
 
         // Call the post method with the parsed data
         this.post(url, parsedData, target);

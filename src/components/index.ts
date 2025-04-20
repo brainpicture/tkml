@@ -215,7 +215,7 @@ export class Proxy extends BaseComponent {
     tag = 'undefined';
     attributes: Record<string, string>;
     hasText = true;
-    canParent = ['tkml', 'title', 'p', 'desc', 'section', 'pill', 'bubble', 'alert', 'text', 'info', 'box'];
+    canParent = ['tkml', 'title', 'p', 'desc', 'section', 'pill', 'bubble', 'alert', 'text', 'info', 'box', 'quote'];
 
 
     constructor(name: string, attributes?: Record<string, string>) {
