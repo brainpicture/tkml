@@ -22,7 +22,14 @@ export class Button extends BaseComponent {
             const target = this.attributes['target'] ? ` target="${safeAttr(this.attributes['target'])}"` : '';
 
             // Convert button to an anchor for external links
-            return `<a href="${safeAttr(url)}"${target} class="button${secondaryClass}"${attrs}${style}>${this.childs()}</a>`;
+            const buttonHtml = `<a href="${safeAttr(url)}"${target} class="button${secondaryClass}"${attrs}${style}>${this.childs()}</a>`;
+
+            // Center the button if center attribute is set
+            if (this.attributes['center'] !== undefined) {
+                return `<div class="center-container">${buttonHtml}</div>`;
+            }
+
+            return buttonHtml;
         }
 
         // Используем универсальную функцию для обработки post/href/required
@@ -36,7 +43,14 @@ export class Button extends BaseComponent {
             setTimeout(() => this.runtime?.preload(this.attributes['href']), 0);
         }
 
-        return `<button class="button${secondaryClass}"${attrs}${style}>${this.childs()}</button>`;
+        const buttonHtml = `<button class="button${secondaryClass}"${attrs}${style}>${this.childs()}</button>`;
+
+        // Center the button if center attribute is set
+        if (this.attributes['center'] !== undefined) {
+            return `<div class="center-container">${buttonHtml}</div>`;
+        }
+
+        return buttonHtml;
     }
 }
 ComponentFactory.register(Button);

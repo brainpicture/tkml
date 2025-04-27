@@ -246,11 +246,11 @@ export class Undefined extends BaseComponent {
 
 // Undefined component is used once an undefined tag is encountered
 export class Error extends BaseComponent {
-    tag = 'error';
+    tag = '_error_';
     private error: string;
 
-    constructor(error: string, attributes?: Record<string, string>) {
-        super(attributes);
+    constructor(error: string) {
+        super();
         this.error = safeAttr(error);
     }
 
@@ -258,6 +258,21 @@ export class Error extends BaseComponent {
         return `<div class="panic"><div class="error">Error: ${this.error}</div></div>`;
     }
 }
+
+// Undefined component is used once an undefined tag is encountered
+export class Warning extends BaseComponent {
+    tag = 'warning';
+    hasText = true;
+
+    constructor(attributes?: Record<string, string>) {
+        super(attributes);
+    }
+
+    render(): string {
+        return `<div class="panic"><div class="warning">${this.renderChildren(this.children)}</div></div>`;
+    }
+}
+ComponentFactory.register(Warning);
 
 // Title stands for <title> tag, has no attributes yet
 export class Title extends BaseComponent {

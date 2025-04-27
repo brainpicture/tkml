@@ -28,10 +28,14 @@ export class Runtime {
     public menuRight: HTMLElement | null = null;
     public menuOverlay: HTMLElement | null = null;
     private leftMenuContentUrl: string | null = null;
+    private rightMenuContentUrl: string | null = null;
     public leftMenuTriggerId: string | null = null;
+    public rightMenuTriggerId: string | null = null;
     public leftMenuOpened: boolean = false;
+    public rightMenuOpened: boolean = false;
     private handleResizeBound: (() => void) | null = null;
-    private loadedMenuContentUrl: string | null = null;
+    private loadedLeftMenuContentUrl: string | null = null;
+    private loadedRightMenuContentUrl: string | null = null;
     private highlightJsInitialized: boolean = false;
     private initializedFunctions: Set<string> = new Set();
     public currentTheme: 'light' | 'dark' = 'light';
@@ -250,18 +254,22 @@ export class Runtime {
             if (!target && this.isBrowser) {
                 window.scrollTo({ top: 0 });
                 // Close menu only on narrow screens during page change
-                if (this.leftMenuContentUrl) {
+                if (this.leftMenuContentUrl || this.rightMenuContentUrl) {
                     if (!this.isWideScreen()) {
                         this.closeMenu();
+                        //TODO: close separate left and right menus
                     }
                 }
             }
         }
         console.log('this.leftMenuTriggerId', this.leftMenuTriggerId)
         if (!this.leftMenuTriggerId) {
-            console.log('close Menu here')
-            this.closeMenu();
             this.leftMenuContentUrl = null;
+            this.closeMenu('left');
+        }
+        if (!this.rightMenuTriggerId) {
+            this.rightMenuContentUrl = null;
+            this.closeMenu('right');
         }
         this.currentUrl = url // now update current url
 
@@ -288,6 +296,7 @@ export class Runtime {
 
         if (updateHistory && !rootElement && !target) {
             this.leftMenuTriggerId = null;
+            this.rightMenuTriggerId = null;
         }
 
 
@@ -332,30 +341,43 @@ export class Runtime {
             processedLength = xhr.responseText.length;
         };
 
+        let renderResult = (nocache: boolean = false) => {
+            this.beforeRender.forEach(fn => fn());
+            parser.finish();
+            if (!postData && !nocache) {
+                this.setCache(fullUrl, xhr.responseText);
+            }
+            if (callback) {
+                callback();
+            }
+            if (updateHistory && !rootElement) {
+                this.pageChanged(url, fullUrl, target);
+            }
+
+
+            // Call the page update method after loading
+            setTimeout(() => this.onPageUpdate(), 0);
+        }
+
         xhr.onload = () => {
             if (xhr.status === 200) {
-                this.beforeRender.forEach(fn => fn());
-                parser.finish();
-                if (!postData) {
-                    this.setCache(fullUrl, xhr.responseText);
-                }
-                if (callback) {
-                    callback();
-                }
-
-                if (updateHistory && !rootElement) {
-                    this.pageChanged(url, fullUrl, target);
-                }
-
-                // Call the page update method after loading
-                setTimeout(() => this.onPageUpdate(), 0);
+                renderResult()
             } else {
                 parser.failed(new Error(`Failed to load URL: ${fullUrl}`));
             }
         };
 
-        xhr.onerror = () => {
-            parser.failed(new Error(`Network error while loading URL: ${fullUrl}`));
+        xhr.onerror = (err) => {
+            // Check if this is a CORS error
+            if (err instanceof ProgressEvent && xhr.status === 0) {
+                console.error('CORS error detected:', err);
+                parser.failed(new Error(`CORS error while loading URL: <a external target="blank" href="${fullUrl}">${fullUrl}</a><br/><desc>
+                    if thats external website – please add <b>external</b> attribute to the link or button</desc>`));
+            } else {
+                console.error('XHR error:', err);
+                parser.failed(new Error(`Network error while loading URL: <a external target="blank" href="${fullUrl}">${fullUrl}</a>`));
+            }
+            renderResult(true) // still render with error
         };
 
         if (postData) {
@@ -643,20 +665,24 @@ export class Runtime {
         this.updateFooterPosition();
 
         // Handle menu state and content after page update
-        if (this.menuLeft && this.menuOverlay) {
+        if ((this.menuLeft || this.menuRight) && this.menuOverlay) {
             const isWideScreen = this.isWideScreen();
             // Determine if the menu should be visible based on state or screen width
 
             // --- Step 1: Ensure Correct Open/Closed State ---
             if (isWideScreen) {
-                // Ensure menu is open if it should be (based on having an initialized trigger)
+                // Ensure left menu is open if it should be
                 if (this.leftMenuTriggerId && !this.leftMenuOpened) {
-                    // Use toggleMenu to handle opening. It will also handle the initial load
-                    // and update loadedMenuContentUrl via its callback.
-                    console.log("onPageUpdate: Re-opening menu on wide screen.");
-                    // Use setTimeout to avoid potential conflicts if called too early
-                    setTimeout(() => this.openMenu(this.leftMenuTriggerId!, this.leftMenuContentUrl || ''), 0);
+                    console.log("onPageUpdate: Re-opening left menu on wide screen.");
+                    setTimeout(() => this.openMenu(this.leftMenuTriggerId!, this.leftMenuContentUrl || '', 'left'), 0);
                 }
+
+                // Ensure right menu is open if it should be
+                if (this.rightMenuTriggerId && !this.rightMenuOpened) {
+                    console.log("onPageUpdate: Re-opening right menu on wide screen.");
+                    setTimeout(() => this.openMenu(this.rightMenuTriggerId!, this.rightMenuContentUrl || '', 'right'), 0);
+                }
+
                 // Ensure overlay is closed on wide screens
                 if (this.menuOverlay.classList.contains('open')) {
                     this.menuOverlay.classList.remove('open');
@@ -717,19 +743,35 @@ export class Runtime {
         });
     }
 
-    public openMenu(triggerId: string, contentUrl: string = ''): void {
-        if (this.isServer || !this.menuLeft || !this.menuOverlay || this.leftMenuOpened) {
+    public openMenu(triggerId: string, contentUrl: string = '', side: string = 'left'): void {
+        const isLeftMenu = side === 'left';
+        const menuElement = isLeftMenu ? this.menuLeft : this.menuRight;
+
+        if (this.isServer || !menuElement || !this.menuOverlay) {
             return;
         }
 
-        this.leftMenuOpened = true;
-        this.tkmlInstance.wrap?.classList.add('menu-left-active');
-        // Update current trigger/URL immediately for state tracking
+        if ((isLeftMenu && this.leftMenuOpened) || (!isLeftMenu && this.rightMenuOpened)) {
+            return;
+        }
 
-        // Load content if URL is provided AND it's different from what's loaded
+        if (isLeftMenu) {
+            this.leftMenuOpened = true;
+            this.tkmlInstance.wrap?.classList.add('menu-left-active');
+        } else {
+            this.rightMenuOpened = true;
+            this.tkmlInstance.wrap?.classList.add('menu-right-active');
+        }
+
+        // Update current trigger/URL immediately for state tracking
         const targetFixedUrl = contentUrl ? this.fixUrl(decodeURIComponent(contentUrl)) : null;
 
-        this.leftMenuContentUrl = targetFixedUrl;
+        if (isLeftMenu) {
+            this.leftMenuContentUrl = targetFixedUrl;
+        } else {
+            this.rightMenuContentUrl = targetFixedUrl;
+        }
+
         const isWideScreen = this.isWideScreen();
 
         if (!isWideScreen) {
@@ -740,84 +782,132 @@ export class Runtime {
             document.body.style.overflow = '';
         }
 
+        const loadedContentUrl = isLeftMenu ? this.loadedLeftMenuContentUrl : this.loadedRightMenuContentUrl;
 
-        if (targetFixedUrl && targetFixedUrl !== this.loadedMenuContentUrl) {
-            this.menuLeft.innerHTML = ''; // Clear before loading
+        if (targetFixedUrl && targetFixedUrl !== loadedContentUrl) {
+            menuElement.innerHTML = ''; // Clear before loading
             // Use the loader's callback to update loadedMenuContentUrl
-            this.loader(this.menuLeft).load(targetFixedUrl, false, undefined, false, undefined, this.menuLeft.id, () => {
-                this.loadedMenuContentUrl = targetFixedUrl; // Update tracker *after* load
+            this.loader(menuElement).load(targetFixedUrl, false, undefined, false, undefined, menuElement.id, () => {
+                if (isLeftMenu) {
+                    this.loadedLeftMenuContentUrl = targetFixedUrl;
+                } else {
+                    this.loadedRightMenuContentUrl = targetFixedUrl;
+                }
             });
-        } else if (!targetFixedUrl && this.loadedMenuContentUrl) {
+        } else if (!targetFixedUrl && loadedContentUrl) {
             // Opening menu without a URL, clear if old content exists
-            this.menuLeft.innerHTML = '';
-            this.loadedMenuContentUrl = null;
-        } else if (targetFixedUrl && targetFixedUrl === this.loadedMenuContentUrl) {
+            menuElement.innerHTML = '';
+            if (isLeftMenu) {
+                this.loadedLeftMenuContentUrl = null;
+            } else {
+                this.loadedRightMenuContentUrl = null;
+            }
+        } else if (targetFixedUrl && targetFixedUrl === loadedContentUrl) {
             // Content is already correct, do nothing to the innerHTML
         } else {
             // Opening without URL, and no old content was loaded.
-            this.menuLeft.innerHTML = ''; // Ensure it's empty
-            this.loadedMenuContentUrl = null;
+            menuElement.innerHTML = ''; // Ensure it's empty
+            if (isLeftMenu) {
+                this.loadedLeftMenuContentUrl = null;
+            } else {
+                this.loadedRightMenuContentUrl = null;
+            }
         }
     }
 
     // Close menu method - closes any active menu (left or right)
-    public closeMenu(): void {
-        if (this.isServer || !this.menuOverlay || !this.leftMenuOpened) {
+    public closeMenu(side?: string): void {
+        if (this.isServer || !this.menuOverlay) {
             return;
         }
-        // Don't close if we are on a wide screen where it should stay open
-        /*if (this.isWideScreen()) {
-            console.log("closeMenu: Skipped closing on wide screen.");
-            return;
-        }*/
 
-        // Deactivate both left and right menus if they exist
-        if (this.menuLeft) this.tkmlInstance.wrap?.classList.remove('menu-left-active');
+        const closeLeft = !side || side === 'left';
+        const closeRight = !side || side === 'right';
 
-        this.menuOverlay.classList.remove('open');
-        document.body.style.overflow = ''; // Restore scrolling
+        // Close left menu if requested
+        if (closeLeft && this.leftMenuOpened && this.menuLeft) {
+            this.tkmlInstance.wrap?.classList.remove('menu-left-active');
+            this.leftMenuOpened = false;
+        }
 
-        this.leftMenuOpened = false;
-        // Do NOT reset loadedMenuContentUrl here, onPageUpdate needs it for comparison.
+        // Close right menu if requested
+        if (closeRight && this.rightMenuOpened && this.menuRight) {
+            this.tkmlInstance.wrap?.classList.remove('menu-right-active');
+            this.rightMenuOpened = false;
+        }
+
+        // If both menus are now closed, remove overlay
+        if (!this.leftMenuOpened && !this.rightMenuOpened) {
+            this.menuOverlay.classList.remove('open');
+            document.body.style.overflow = ''; // Restore scrolling
+        }
     }
 
     // Simplified menu toggle method
-    public toggleMenu(triggerId: string, contentUrl: string = ''): void {
-        if (!this.leftMenuOpened) {
-            this.openMenu(triggerId, contentUrl);
+    public toggleMenu(triggerId: string, contentUrl: string = '', side: string = 'left'): void {
+        const isLeftMenu = side === 'left';
+        const isOpen = isLeftMenu ? this.leftMenuOpened : this.rightMenuOpened;
+
+        if (!isOpen) {
+            this.openMenu(triggerId, contentUrl, side);
         } else {
             // Closing the menu
-            this.closeMenu();
+            this.closeMenu(side);
         }
     }
 
     public isWideScreen(): boolean {
-        return window.innerWidth > 900;
+        let limit = 900;
+        if (this.leftMenuTriggerId && this.rightMenuTriggerId) {
+            limit = 1300;
+        }
+        return window.innerWidth > limit;
     }
 
     // Auto-open menu on page load for wide screens
-    public initializeMenu(triggerId: string, contentUrl: string = ''): void {
-        if (this.isServer || !this.menuLeft) return;
+    public initializeMenu(triggerId: string, contentUrl: string = '', side: string = 'left'): void {
+        if (this.isServer) return;
 
-        this.leftMenuTriggerId = triggerId;
+        const isLeftMenu = side === 'left';
+        const menuElement = isLeftMenu ? this.menuLeft : this.menuRight;
 
-        // Update runtime state with the details from the *current* page's menu component
-        // This is crucial for onPageUpdate to know the *intended* state after navigation
-        contentUrl = this.fixUrl(decodeURIComponent(contentUrl)) || '';
+        if (!menuElement) return;
 
-        console.log(`initializeMenu: Setting leftMenuTriggerId=${triggerId}, leftMenuContentUrl=${contentUrl}, oldURL=${this.leftMenuContentUrl}`);
-        if (contentUrl !== this.leftMenuContentUrl) {
-            this.leftMenuContentUrl = contentUrl;
-            this.loader(this.menuLeft).load(contentUrl, false, undefined, false, undefined, this.menuLeft.id, () => {
-                if (this.menuLeft) {
-                    this.menuLeft.scrollTop = 0;
-                }
-                if (this.isWideScreen()) {
-                    this.openMenu(triggerId, contentUrl);
-                }
-            })
+        if (isLeftMenu) {
+            this.leftMenuTriggerId = triggerId;
+        } else {
+            this.rightMenuTriggerId = triggerId;
         }
 
+        // Update runtime state with the details from the *current* page's menu component
+        contentUrl = this.fixUrl(decodeURIComponent(contentUrl)) || '';
+
+        console.log(`initializeMenu: Setting ${side}MenuTriggerId=${triggerId}, ${side}MenuContentUrl=${contentUrl}`);
+
+        if ((isLeftMenu && contentUrl !== this.leftMenuContentUrl) ||
+            (!isLeftMenu && contentUrl !== this.rightMenuContentUrl)) {
+            if (isLeftMenu) {
+                console.log('left', contentUrl, this.leftMenuContentUrl);
+            } else {
+                console.log('right', contentUrl, this.rightMenuContentUrl);
+            }
+            console.log('initializeMenu: Loading menu content', contentUrl);
+
+            if (isLeftMenu) {
+                this.leftMenuContentUrl = contentUrl;
+            } else {
+                this.rightMenuContentUrl = contentUrl;
+            }
+
+            this.loader(menuElement).load(contentUrl, false, undefined, false, undefined, menuElement.id, () => {
+                if (menuElement) {
+                    menuElement.scrollTop = 0;
+                }
+                if (this.isWideScreen()) {
+                    this.openMenu(triggerId, contentUrl, side);
+                }
+            });
+        }
 
         // Setup resize listener (ensure only one)
         window.removeEventListener('resize', this.handleResizeBound!);
@@ -829,34 +919,41 @@ export class Runtime {
     // Handle menu resize
     private handleMenuResize(): void {
         // This primarily ensures the *visual state* (open/closed/overlay) is correct on resize.
-        // Content loading decisions are mainly handled by toggleMenu and onPageUpdate.
-        if (this.isServer || !this.menuLeft || !this.menuOverlay) return;
+        if (this.isServer) return;
 
         const isWideScreen = this.isWideScreen();
 
         if (isWideScreen) {
             // Ensure overlay is closed if it somehow became open
-            if (this.menuOverlay.classList.contains('open')) {
+            if (this.menuOverlay && this.menuOverlay.classList.contains('open')) {
                 this.menuOverlay.classList.remove('open');
                 document.body.style.overflow = '';
             }
-            if (!this.tkmlInstance.wrap?.classList.contains('wide-screen')) {
-                this.tkmlInstance.wrap?.classList.add('wide-screen');
-                if (this.leftMenuTriggerId) {
-                    console.log('openMenu on resize to wide screen', this.leftMenuTriggerId, this.leftMenuContentUrl)
-                    this.openMenu(this.leftMenuTriggerId, this.leftMenuContentUrl || '');
+
+            if (this.tkmlInstance.wrap && !this.tkmlInstance.wrap.classList.contains('wide-screen')) {
+                this.tkmlInstance.wrap.classList.add('wide-screen');
+
+                // Re-open left menu if needed
+                if (this.leftMenuTriggerId && this.menuLeft) {
+                    console.log('openMenu on resize to wide screen', this.leftMenuTriggerId, this.leftMenuContentUrl);
+                    this.openMenu(this.leftMenuTriggerId, this.leftMenuContentUrl || '', 'left');
+                }
+
+                // Re-open right menu if needed
+                if (this.rightMenuTriggerId && this.menuRight) {
+                    console.log('openMenu on resize to wide screen', this.rightMenuTriggerId, this.rightMenuContentUrl);
+                    this.openMenu(this.rightMenuTriggerId, this.rightMenuContentUrl || '', 'right');
                 }
             }
         } else {
-            // Narrow screen: If menu is open, ensure overlay is open and body scroll is hidden
-            if (this.leftMenuOpened) {
-                //if (!this.menuOverlay.classList.contains('open')) {
-                //    this.menuOverlay.classList.add('open');
-                //}
-                //document.body.style.overflow = 'hidden';
+            // Narrow screen: Close menus and ensure overlay is closed
+            if (this.leftMenuOpened || this.rightMenuOpened) {
                 this.closeMenu();
             }
-            this.tkmlInstance.wrap?.classList.remove('wide-screen');
+
+            if (this.tkmlInstance.wrap) {
+                this.tkmlInstance.wrap.classList.remove('wide-screen');
+            }
         }
     }
 

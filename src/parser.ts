@@ -175,6 +175,7 @@ export class Parser {
 
     failed(error: Error) {
         console.error(error);
+        this.add(`<warning>${error.message}</warning>`);
     }
 }
 

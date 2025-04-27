@@ -4,7 +4,7 @@ import { encodeUrl, safeIds, safeAttr } from '../util';
 export class A extends BaseComponent {
     tag = 'a';
     hasText = true;
-    canParent = ['tkml', 'info', 'footer', 'quote', 'text', 'p', 'desc'];
+    canParent = ['tkml', 'info', 'footer', 'quote', 'text', 'p', 'desc', 'warning'];
 
     renderChildren(children: Component[]): string {
         return this.renderText(children);
